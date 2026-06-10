@@ -318,7 +318,7 @@ class KnowledgeGraph:
             return
         instance.risk_level = instance.risk_level if instance.risk_level != "unknown" else spec.risk_level
         instance.graspable = instance.graspable and spec.graspability != "impossible"
-        instance.processable = instance.processable and spec.risk_level not in {"critical", "hazardous"}
+        instance.processable = instance.processable and spec.risk_level not in {"high", "critical", "hazardous"}
 
     def _infer_relations(self, detected_objects: Iterable[DetectedObject]) -> List[DetectedRelation]:
         objects = list(detected_objects)
