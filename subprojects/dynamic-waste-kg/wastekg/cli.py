@@ -10,6 +10,7 @@ from .store import KnowledgeGraph
 
 
 def build_demo_graph() -> KnowledgeGraph:
+    # 这是一个最小演示图谱，用来帮助你理解“长期知识 + 短期记忆 + 关系”的整体结构。
     graph = KnowledgeGraph()
     for spec in [
         CategorySpec(name="brick", category="building_waste", risk_level="low", material="ceramic"),

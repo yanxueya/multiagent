@@ -6,6 +6,7 @@ from .store import KnowledgeGraph
 
 
 def build_planning_context(graph: KnowledgeGraph, task: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    # 这个函数的职责很简单：把图谱整理成“规划器可以直接读取的视图”。
     task = task or {}
     target_categories = set(task.get("target_categories", []))
     max_candidates = int(task.get("max_candidates", 10))

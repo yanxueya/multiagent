@@ -145,6 +145,8 @@ class KnowledgeGraph:
         updated: List[str] = []
 
         for detected in observation.objects:
+            # 先把每个检测框映射成图谱中的“实例节点”
+            # 规则是：同一个 temp_id 优先视为同一对象；否则再尝试按空间位置匹配旧实例。
             instance, created_flag = self._resolve_detection(detected, observation.frame_id, observation.source)
             resolved_ids[detected.temp_id] = instance.instance_id
             if created_flag:
@@ -269,6 +271,7 @@ class KnowledgeGraph:
         return self._merge_detection(existing, detected, frame_id, source), False
 
     def _merge_detection(self, existing: ObjectInstance, detected: DetectedObject, frame_id: str, source: str) -> ObjectInstance:
+        # 短期记忆更新：保留旧状态，但用新观测覆盖位置、置信度和任务相关属性。
         merged = replace(
             existing,
             class_name=detected.class_name or existing.class_name,
@@ -316,6 +319,8 @@ class KnowledgeGraph:
         spec = self.categories.get(instance.class_name)
         if spec is None:
             return
+        # 长期知识层只提供稳定先验，不应该被一次观测完全改写。
+        # 这里做的是“先验 -> 实例”的投影，而不是反向覆盖类别知识。
         instance.risk_level = instance.risk_level if instance.risk_level != "unknown" else spec.risk_level
         instance.graspable = instance.graspable and spec.graspability != "impossible"
         instance.processable = instance.processable and spec.risk_level not in {"high", "critical", "hazardous"}
@@ -366,6 +371,7 @@ class KnowledgeGraph:
         target = self.instances.get(edge.target_id)
         if source is None or target is None:
             return
+        # 关系边不仅是“连线”，还会反过来改变实例的可处理性和阻塞状态。
         if edge.relation == "blocked_by":
             if target.instance_id not in source.blocked_by:
                 source.blocked_by.append(target.instance_id)

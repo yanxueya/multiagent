@@ -1,43 +1,43 @@
 # Dynamic Waste Knowledge Graph
 
-This repository contains a working prototype of a dynamic knowledge graph for hazardous waste recognition and human-robot collaborative decision-making in complex construction environments.
+这是一个用于复杂建筑环境中危险废弃物认知与人机协同决策的动态知识图谱原型。
 
-If you are new to the project, start here:
+如果你是第一次接触这个项目，建议先从下面两个文件开始：
 
-- [Beginner guide](docs/beginner_guide.md)
-- [Tests that explain the graph](tests/)
+- [新手指南](docs/beginner_guide.md)
+- [能够帮助理解图谱的测试](tests/)
 
-## What it does
+## 它能做什么
 
-- Stores long-term category knowledge and short-term scene memory
-- Tracks object instances and spatial relations
-- Records observation and action events
-- Exposes planning-oriented query helpers for multi-agent systems
-- Provides a small CLI demo that builds a sample scene
+- 保存长期类别知识和短期场景记忆
+- 跟踪对象实例和空间关系
+- 记录观测事件和动作事件
+- 为后续多智能体系统提供规划查询接口
+- 提供一个可以直接运行的 CLI 演示
 
-## Run tests
+## 运行测试
 
 ```bash
 python -m unittest discover -s tests
 ```
 
-## Run the demo
+## 运行演示
 
 ```bash
 python -m wastekg.cli
 python -m wastekg.cli --json
 ```
 
-## Main modules
+## 主要模块
 
 - `wastekg.models`: graph data model
 - `wastekg.store`: in-memory dynamic graph store and update engine
 - `wastekg.query`: planning-context extraction
 - `wastekg.cli`: demo graph builder and CLI entrypoint
 
-## Learning goals
+## 学习目标
 
-- Understand long-term knowledge versus short-term memory
-- Understand how object relations are stored and updated
-- Understand how attributes affect planning
-- Understand how this graph can later connect to multi-agent agents and ROS2
+- 理解长期知识和短期记忆的区别
+- 理解对象关系是怎么存储和更新的
+- 理解属性如何影响任务规划
+- 理解后面如何衔接多智能体和 ROS2

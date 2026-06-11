@@ -1,31 +1,31 @@
-# Dynamic Waste Knowledge Graph Beginner Guide
+# 动态废弃物知识图谱新手指南
 
-This guide is written for a beginner. It shows how to use the knowledge graph step by step, what each part means, and how to extend it later.
+这份指南是给初学者看的，目标是让你一步一步理解这个知识图谱怎么用、每个部分是什么意思，以及以后怎么继续接入多智能体和 ROS2。
 
-## 1. What this project is
+## 1. 这个项目是什么
 
-This project is a small but working knowledge-graph prototype for construction waste and hazardous waste scenes.
+这个项目是一个可运行的知识图谱原型，用来描述建筑废弃物和危险废弃物场景。
 
-It has three layers:
+它有三层：
 
-- Long-term knowledge: what an object is, such as its category, risk level, and material
-- Short-term memory: what is happening now, such as position, pose, priority, and current relations
-- Event log: what changed, when it changed, and why it changed
+- 长期知识：物体“是什么”，比如类别、风险等级、材质
+- 短期记忆：物体“现在是什么状态”，比如位置、姿态、优先级、关系
+- 事件日志：什么变了、什么时候变的、为什么变
 
-The graph is designed to support later multi-agent planning and ROS2 execution.
+这个图谱后面要给多智能体规划和 ROS2 执行提供共享状态。
 
-## 2. Where to start
+## 2. 先看哪些文件
 
-Start with these files:
+建议你先看这几个文件：
 
-- `wastekg/models.py`: defines the data structures
-- `wastekg/store.py`: stores and updates the graph
-- `wastekg/query.py`: builds planning context for later agents
-- `wastekg/cli.py`: builds a demo scene
+- `wastekg/models.py`：定义数据结构
+- `wastekg/store.py`：保存和更新图谱
+- `wastekg/query.py`：给后续智能体生成规划上下文
+- `wastekg/cli.py`：生成一个演示场景
 
-## 3. Step-by-step usage
+## 3. 一步一步使用
 
-### Step 1: Create a graph
+### 第一步：创建图谱
 
 ```python
 from wastekg.store import KnowledgeGraph
@@ -33,9 +33,9 @@ from wastekg.store import KnowledgeGraph
 graph = KnowledgeGraph()
 ```
 
-This gives you an empty graph with no categories, no objects, and no relations.
+这时你得到的是一个空图谱，里面还没有类别、没有物体、也没有关系。
 
-### Step 2: Add long-term knowledge
+### 第二步：加入长期知识
 
 ```python
 from wastekg.models import CategorySpec
@@ -52,9 +52,9 @@ graph.register_category(
 )
 ```
 
-This is long-term knowledge. It should not change just because the object moves.
+这一步是在加长期知识。它不应该因为物体移动了就改变。
 
-### Step 3: Add a first observation
+### 第三步：加入第一次观测
 
 ```python
 from wastekg.models import DetectedObject, Observation
@@ -76,16 +76,16 @@ obs1 = Observation(
 summary1 = graph.apply_observation(obs1)
 ```
 
-This creates a short-term memory node, such as `paint_can_01`.
+这一步会在短期记忆层里创建一个实例节点，比如 `paint_can_01`。
 
-### Step 4: Read the result
+### 第四步：查看结果
 
 ```python
 print(summary1)
 print(graph.instances["paint_can_01"].to_dict())
 ```
 
-You should look for:
+你重点看这些字段：
 
 - `instance_id`
 - `class_name`
@@ -94,7 +94,7 @@ You should look for:
 - `risk_level`
 - `task_status`
 
-### Step 5: Add a second observation for the same object
+### 第五步：对同一个物体再观测一次
 
 ```python
 obs2 = Observation(
@@ -114,16 +114,16 @@ obs2 = Observation(
 summary2 = graph.apply_observation(obs2)
 ```
 
-This should update the same instance instead of creating a new one.
+这时图谱应该更新同一个实例，而不是新建一个对象。
 
-What you are learning here:
+你可以从这里学到：
 
-- short-term memory keeps identity across frames
-- position changes over time
-- confidence can change
-- the event log records the update
+- 短期记忆会跨帧保持“同一个对象”的身份
+- 位置信息会变化
+- 置信度会变化
+- 事件日志会记录更新过程
 
-### Step 6: Add relations between objects
+### 第六步：加入两个对象之间的关系
 
 ```python
 obs3 = Observation(
@@ -138,11 +138,11 @@ obs3 = Observation(
 graph.apply_observation(obs3)
 ```
 
-Because the `paint_can` is above the `brick`, the graph can infer a relation such as `on_top_of`.
+因为 `paint_can` 在 `brick` 上面，图谱可以推断出类似 `on_top_of` 这样的关系。
 
-This is important because task planning depends on relations.
+这一步很重要，因为后续任务规划要依赖对象之间的关系。
 
-### Step 7: Query planning context
+### 第七步：查询规划上下文
 
 ```python
 from wastekg.query import build_planning_context
@@ -153,47 +153,47 @@ print(context["blocked"])
 print(context["risky"])
 ```
 
-This is the interface that later multi-agent components should use.
+这就是后面多智能体应该使用的接口。
 
-### Step 8: Mark an object as processed
+### 第八步：标记对象已经处理完
 
 ```python
 graph.mark_processed("paint_can_01", action="picked_and_removed")
 ```
 
-This changes the short-term memory state and writes an event.
+这一步会修改短期记忆状态，并写入一条事件。
 
-## 4. How long-term and short-term memory differ
+## 4. 长期知识和短期记忆有什么区别
 
-### Long-term knowledge
+### 长期知识
 
-Stored in `graph.categories`
+保存在 `graph.categories` 里。
 
-Example:
+例如：
 
-- `paint_can` is hazardous
-- `brick` is low risk
-- `metal` is medium risk
+- `paint_can` 是危险物
+- `brick` 风险低
+- `metal` 风险中等
 
-This should stay stable unless your domain knowledge changes.
+这类知识应该保持稳定，除非你的领域知识本身发生变化。
 
-### Short-term memory
+### 短期记忆
 
-Stored in `graph.instances`
+保存在 `graph.instances` 里。
 
-Example:
+例如：
 
-- `paint_can_01` moved from one position to another
-- `paint_can_01` may be blocked by `brick_01`
-- `paint_can_01` may be processed or waiting
+- `paint_can_01` 从一个位置移动到了另一个位置
+- `paint_can_01` 可能被 `brick_01` 挡住
+- `paint_can_01` 可能已经处理完，也可能还在等待
 
-This changes every time you observe the scene or execute an action.
+这类信息会随着每次观测和操作持续变化。
 
-## 5. How interaction works
+## 5. 交互关系怎么理解
 
-Interaction means that one object affects another.
+交互关系表示一个物体会影响另一个物体。
 
-Examples:
+常见关系有：
 
 - `on_top_of`
 - `touching`
@@ -201,13 +201,13 @@ Examples:
 - `blocked_by`
 - `supports`
 
-These relations are important because the planner should not treat all objects as independent.
+这些关系很重要，因为规划器不能把所有物体都当成互相独立的。
 
-## 6. How attributes work
+## 6. 属性怎么理解
 
-Attributes are the information stored on nodes and edges.
+属性就是节点和边上保存的信息。
 
-Examples of instance attributes:
+### 实例属性
 
 - `center_xyz`
 - `priority`
@@ -216,43 +216,42 @@ Examples of instance attributes:
 - `graspable`
 - `blocked_by`
 
-Examples of category attributes:
+### 类别属性
 
 - `material`
 - `risk_level`
 - `graspability`
 - `recyclability`
 
-## 7. How to continue later
+## 7. 后面怎么继续
 
-Once you understand this prototype, the next step is to connect:
+当你理解这个原型以后，下一步就是把下面这些东西接进来：
 
-1. RealSense D435i input
-2. YOLOv11 object detection
-3. Multi-modal verification
-4. LangGraph agents
-5. ROS2 execution
+1. RealSense D435i 输入
+2. YOLOv11 目标检测
+3. 多模态复核
+4. LangGraph 多智能体
+5. ROS2 执行
 
-The graph should remain the shared state center for all of them.
+图谱应该一直作为这些模块之间的共享状态中心。
 
-## 8. Suggested learning order
+## 8. 建议的学习顺序
 
-1. Run the tests
-2. Read the beginner guide
-3. Inspect the demo CLI
-4. Modify one category
-5. Add one new object
-6. Add one relation
-7. Query the planning context
-8. Mark one object as processed
+1. 先跑测试
+2. 看新手指南
+3. 看演示 CLI
+4. 改一个类别
+5. 新增一个物体
+6. 新增一个关系
+7. 查询规划上下文
+8. 标记一个对象为已处理
 
-## 9. Run commands
+## 9. 常用命令
 
-From `subprojects/dynamic-waste-kg`:
+在 `subprojects/dynamic-waste-kg` 目录下运行：
 
 ```bash
 python -m unittest discover -s tests
 python -m wastekg.cli
 python -m wastekg.cli --json
 ```
-
