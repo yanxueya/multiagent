@@ -20,6 +20,8 @@
 
 - `wastekg/models.py`：定义数据结构
 - `wastekg/store.py`：保存和更新图谱
+- `wastekg/knowledge_base.py`：给长期知识层提供默认种子
+- `wastekg/interfaces.py`：YOLO+大模型入口、LangGraph/ROS2 出口
 - `wastekg/query.py`：给后续智能体生成规划上下文
 - `wastekg/cli.py`：生成一个演示场景
 
@@ -46,7 +48,7 @@ graph.register_category(
         category="hazardous_waste",
         material="metal",
         risk_level="high",
-        graspability="caution",
+        graspability="low",
         recyclability="low",
     )
 )
@@ -163,7 +165,75 @@ graph.mark_processed("paint_can_01", action="picked_and_removed")
 
 这一步会修改短期记忆状态，并写入一条事件。
 
-## 4. 长期知识和短期记忆有什么区别
+## 4. 先种长期知识，再接感知和执行
+
+如果你想把项目当成完整系统来学，推荐顺序是：
+
+### 先种长期知识
+
+```python
+from wastekg import KnowledgeGraph, seed_default_categories
+
+graph = KnowledgeGraph()
+seed_default_categories(graph)
+print(graph.categories["glass"].to_dict())
+```
+
+这样你就能先得到一套稳定的类别知识。
+
+### 再接 YOLO + 大模型输入
+
+```python
+from wastekg import VisionDetection, VisionPacket, vision_packet_to_observation
+
+packet = VisionPacket(
+    frame_id="frame_001",
+    source="camera",
+    detections=[
+        VisionDetection(
+            temp_id="d1",
+            yolo_class_name="brick",
+            yolo_confidence=0.72,
+            llm_class_name="glass",
+            llm_confidence=0.88,
+            center_xyz=(0.1, 0.1, 0.0),
+            risk_hint="medium",
+        )
+    ],
+)
+
+obs = vision_packet_to_observation(packet)
+graph.apply_observation(obs)
+```
+
+这里的意思是：
+
+- YOLO 先给一个初筛结果
+- 大模型可以复核并覆盖
+- 最后统一变成图谱可用的 `Observation`
+
+### 最后接 LangGraph / ROS2 输出
+
+```python
+from wastekg import PlannerRequest, build_langgraph_state, build_ros2_action_command
+
+state = build_langgraph_state(
+    graph,
+    PlannerRequest(task_id="task_001", objective="sort_glass", target_categories=["glass"]),
+)
+
+action = build_ros2_action_command("pick", "glass_01", {"gripper": "close"}, requires_confirmation=True)
+print(state["planning_context"]["candidates"])
+print(action)
+```
+
+这一步的意思是：
+
+- LangGraph 读取图谱，生成规划状态
+- ROS2 只接收结构化动作命令
+- 执行后再把反馈写回图谱
+
+## 5. 长期知识和短期记忆有什么区别
 
 ### 长期知识
 
@@ -189,7 +259,7 @@ graph.mark_processed("paint_can_01", action="picked_and_removed")
 
 这类信息会随着每次观测和操作持续变化。
 
-## 5. 交互关系怎么理解
+## 6. 交互关系怎么理解
 
 交互关系表示一个物体会影响另一个物体。
 
@@ -203,7 +273,7 @@ graph.mark_processed("paint_can_01", action="picked_and_removed")
 
 这些关系很重要，因为规划器不能把所有物体都当成互相独立的。
 
-## 6. 属性怎么理解
+## 7. 属性怎么理解
 
 属性就是节点和边上保存的信息。
 
@@ -223,7 +293,7 @@ graph.mark_processed("paint_can_01", action="picked_and_removed")
 - `graspability`
 - `recyclability`
 
-## 7. 后面怎么继续
+## 8. 后面怎么继续
 
 当你理解这个原型以后，下一步就是把下面这些东西接进来：
 
@@ -235,7 +305,7 @@ graph.mark_processed("paint_can_01", action="picked_and_removed")
 
 图谱应该一直作为这些模块之间的共享状态中心。
 
-## 8. 建议的学习顺序
+## 9. 建议的学习顺序
 
 1. 先跑测试
 2. 看新手指南
@@ -246,7 +316,7 @@ graph.mark_processed("paint_can_01", action="picked_and_removed")
 7. 查询规划上下文
 8. 标记一个对象为已处理
 
-## 9. 常用命令
+## 10. 常用命令
 
 在 `subprojects/dynamic-waste-kg` 目录下运行：
 

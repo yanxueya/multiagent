@@ -26,10 +26,30 @@ class CategorySpec:
     risk_level: str = "unknown"
     fragility: str = "unknown"
     graspability: str = "unknown"
+    pollution_level: str = "unknown"
     recyclability: str = "unknown"
     semantic_tags: List[str] = field(default_factory=list)
     confidence_prior: float = 0.0
     description: str = ""
+    source_refs: List[str] = field(default_factory=list)
+    notes: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "category": self.category,
+            "material": self.material,
+            "risk_level": self.risk_level,
+            "fragility": self.fragility,
+            "graspability": self.graspability,
+            "pollution_level": self.pollution_level,
+            "recyclability": self.recyclability,
+            "semantic_tags": list(self.semantic_tags),
+            "confidence_prior": self.confidence_prior,
+            "description": self.description,
+            "source_refs": list(self.source_refs),
+            "notes": self.notes,
+        }
 
 
 @dataclass(slots=True)
@@ -77,6 +97,9 @@ class ObjectInstance:
     last_action: str = ""
     task_status: str = "pending"
     risk_level: str = "unknown"
+    fragility_level: str = "unknown"
+    graspability_level: str = "unknown"
+    pollution_level: str = "unknown"
     occlusion_state: str = "unknown"
     contact_state: str = "unknown"
     support_state: str = "unknown"
@@ -113,6 +136,9 @@ class ObjectInstance:
             "last_action": self.last_action,
             "task_status": self.task_status,
             "risk_level": self.risk_level,
+            "fragility_level": self.fragility_level,
+            "graspability_level": self.graspability_level,
+            "pollution_level": self.pollution_level,
             "occlusion_state": self.occlusion_state,
             "contact_state": self.contact_state,
             "support_state": self.support_state,

@@ -13,7 +13,7 @@ class LearningMemoryTests(unittest.TestCase):
                 category="hazardous_waste",
                 material="metal",
                 risk_level="high",
-                graspability="caution",
+                graspability="low",
             )
         )
 

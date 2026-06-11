@@ -34,7 +34,13 @@ class KnowledgeGraph:
             GraphEvent(
                 event_type="category_register",
                 subject_id=category.name,
-                after_state={"category": category.category, "risk_level": category.risk_level},
+                after_state={
+                    "category": category.category,
+                    "risk_level": category.risk_level,
+                    "fragility": category.fragility,
+                    "graspability": category.graspability,
+                    "pollution_level": category.pollution_level,
+                },
                 source="system",
             )
         )
@@ -70,6 +76,9 @@ class KnowledgeGraph:
             last_action=instance.last_action or before.last_action,
             task_status=instance.task_status or before.task_status,
             risk_level=instance.risk_level or before.risk_level,
+            fragility_level=instance.fragility_level or before.fragility_level,
+            graspability_level=instance.graspability_level or before.graspability_level,
+            pollution_level=instance.pollution_level or before.pollution_level,
             occlusion_state=instance.occlusion_state or before.occlusion_state,
             contact_state=instance.contact_state or before.contact_state,
             support_state=instance.support_state or before.support_state,
@@ -233,10 +242,13 @@ class KnowledgeGraph:
             "risk_level": spec.risk_level,
             "fragility": spec.fragility,
             "graspability": spec.graspability,
+            "pollution_level": spec.pollution_level,
             "recyclability": spec.recyclability,
             "semantic_tags": list(spec.semantic_tags),
             "confidence_prior": spec.confidence_prior,
             "description": spec.description,
+            "source_refs": list(spec.source_refs),
+            "notes": spec.notes,
         }
 
     def _resolve_detection(self, detected: DetectedObject, frame_id: str, source: str) -> Tuple[ObjectInstance, bool]:
@@ -250,19 +262,22 @@ class KnowledgeGraph:
             instance_id = self.generate_instance_id(detected.class_name)
             return (
                 ObjectInstance(
-                instance_id=instance_id,
-                class_name=detected.class_name,
-                center_xyz=detected.center_xyz,
-                orientation=detected.orientation,
-                bbox_3d=detected.bbox_3d,
-                confidence=detected.confidence,
-                risk_level=detected.risk_level,
-                task_status="active",
-                observed_aliases=[detected.temp_id],
-                last_seen_frame=frame_id,
-                source=source,
-                metadata=dict(detected.metadata),
-                priority=self._infer_priority(detected),
+                    instance_id=instance_id,
+                    class_name=detected.class_name,
+                    center_xyz=detected.center_xyz,
+                    orientation=detected.orientation,
+                    bbox_3d=detected.bbox_3d,
+                    confidence=detected.confidence,
+                    risk_level=detected.risk_level,
+                    fragility_level="unknown",
+                    graspability_level="unknown",
+                    pollution_level="unknown",
+                    task_status="active",
+                    observed_aliases=[detected.temp_id],
+                    last_seen_frame=frame_id,
+                    source=source,
+                    metadata=dict(detected.metadata),
+                    priority=self._infer_priority(detected),
                 ),
                 True,
             )
@@ -287,6 +302,9 @@ class KnowledgeGraph:
             task_relevance=max(existing.task_relevance, detected.confidence),
             metadata={**existing.metadata, **detected.metadata},
             source=source or existing.source,
+            fragility_level=existing.fragility_level,
+            graspability_level=existing.graspability_level,
+            pollution_level=existing.pollution_level,
         )
         return merged
 
@@ -322,7 +340,10 @@ class KnowledgeGraph:
         # 长期知识层只提供稳定先验，不应该被一次观测完全改写。
         # 这里做的是“先验 -> 实例”的投影，而不是反向覆盖类别知识。
         instance.risk_level = instance.risk_level if instance.risk_level != "unknown" else spec.risk_level
-        instance.graspable = instance.graspable and spec.graspability != "impossible"
+        instance.fragility_level = spec.fragility if instance.fragility_level == "unknown" else instance.fragility_level
+        instance.graspability_level = spec.graspability if instance.graspability_level == "unknown" else instance.graspability_level
+        instance.pollution_level = spec.pollution_level if instance.pollution_level == "unknown" else instance.pollution_level
+        instance.graspable = instance.graspability_level in {"low", "medium"}
         instance.processable = instance.processable and spec.risk_level not in {"high", "critical", "hazardous"}
 
     def _infer_relations(self, detected_objects: Iterable[DetectedObject]) -> List[DetectedRelation]:

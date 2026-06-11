@@ -4,7 +4,8 @@ import argparse
 import json
 from typing import Any, Dict
 
-from .models import CategorySpec, DetectedObject, Observation
+from .knowledge_base import seed_default_categories
+from .models import DetectedObject, Observation
 from .query import build_planning_context
 from .store import KnowledgeGraph
 
@@ -12,21 +13,14 @@ from .store import KnowledgeGraph
 def build_demo_graph() -> KnowledgeGraph:
     # 这是一个最小演示图谱，用来帮助你理解“长期知识 + 短期记忆 + 关系”的整体结构。
     graph = KnowledgeGraph()
-    for spec in [
-        CategorySpec(name="brick", category="building_waste", risk_level="low", material="ceramic"),
-        CategorySpec(name="wood", category="building_waste", risk_level="low", material="organic"),
-        CategorySpec(name="metal", category="building_waste", risk_level="medium", material="metal"),
-        CategorySpec(name="paint_can", category="hazardous_waste", risk_level="high", material="metal"),
-        CategorySpec(name="glass", category="building_waste", risk_level="medium", material="glass"),
-    ]:
-        graph.register_category(spec)
+    seed_default_categories(graph)
 
     observation = Observation(
         frame_id="demo_frame_001",
         source="demo_sensor",
         objects=[
             DetectedObject(temp_id="t1", class_name="brick", confidence=0.96, center_xyz=(0.10, 0.10, 0.00)),
-            DetectedObject(temp_id="t2", class_name="paint_can", confidence=0.91, center_xyz=(0.11, 0.11, 0.08), risk_level="high"),
+            DetectedObject(temp_id="t2", class_name="waste_paint_can", confidence=0.91, center_xyz=(0.11, 0.11, 0.08), risk_level="high"),
             DetectedObject(temp_id="t3", class_name="metal", confidence=0.88, center_xyz=(0.30, 0.20, 0.02)),
         ],
     )

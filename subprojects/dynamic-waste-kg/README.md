@@ -5,6 +5,7 @@
 如果你是第一次接触这个项目，建议先从下面两个文件开始：
 
 - [新手指南](docs/beginner_guide.md)
+- [长期知识种子说明](docs/knowledge_seed_zh.md)
 - [能够帮助理解图谱的测试](tests/)
 
 ## 它能做什么
@@ -32,6 +33,8 @@ python -m wastekg.cli --json
 
 - `wastekg.models`: graph data model
 - `wastekg.store`: in-memory dynamic graph store and update engine
+- `wastekg.knowledge_base`: default long-term knowledge seed
+- `wastekg.interfaces`: perception input and LangGraph/ROS2 output adapters
 - `wastekg.query`: planning-context extraction
 - `wastekg.cli`: demo graph builder and CLI entrypoint
 
