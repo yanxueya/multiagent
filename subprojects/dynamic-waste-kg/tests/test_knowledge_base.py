@@ -8,34 +8,48 @@ class KnowledgeBaseTests(unittest.TestCase):
         graph = KnowledgeGraph()
         registered = seed_default_categories(graph)
 
-        self.assertGreaterEqual(len(registered), 11)
+        self.assertEqual(len(registered), 11)
         self.assertIn("glass", graph.categories)
-        self.assertIn("asbestos", graph.categories)
-        self.assertIn("waste_paint_can", graph.categories)
+        self.assertNotIn("asbestos_suspect", graph.categories)
+        self.assertNotIn("unknown", graph.categories)
+        self.assertNotIn("asphalt", graph.categories)
+        self.assertNotIn("waste_paint_can", graph.categories)
 
         glass = graph.categories["glass"]
-        asbestos = graph.categories["asbestos"]
-        paint_can = graph.categories["waste_paint_can"]
 
         self.assertEqual(glass.risk_level, "medium")
         self.assertEqual(glass.fragility, "high")
         self.assertEqual(glass.pollution_level, "low")
         self.assertEqual(glass.graspability, "low")
+        self.assertEqual(glass.handling_mode, "robot_with_supervision")
+        self.assertEqual(glass.grasp_difficulty, "high")
+        self.assertTrue(glass.needs_llm_review)
+        self.assertFalse(glass.auto_processable)
         self.assertTrue(glass.source_refs)
+        self.assertIn("transparency", glass.visual_prototype)
 
-        self.assertEqual(asbestos.risk_level, "high")
-        self.assertEqual(asbestos.pollution_level, "high")
-        self.assertTrue(asbestos.source_refs)
-
-        self.assertEqual(paint_can.risk_level, "high")
-        self.assertEqual(paint_can.pollution_level, "medium")
-        self.assertIn("工程判定", paint_can.notes)
+        gypsum = graph.categories["gypsum_board"]
+        self.assertEqual(gypsum.handling_mode, "human_review")
+        self.assertTrue(gypsum.needs_llm_review)
 
     def test_default_seed_list_is_stable(self) -> None:
         names = [spec.name for spec in DEFAULT_CATEGORY_SPECS]
-        self.assertIn("brick", names)
-        self.assertIn("glass", names)
-        self.assertIn("asbestos", names)
+        self.assertEqual(
+            names,
+            [
+                "concrete",
+                "brick",
+                "tile",
+                "wood",
+                "gypsum_board",
+                "foam",
+                "metal",
+                "soft_plastic",
+                "hard_plastic",
+                "paperboard",
+                "glass",
+            ],
+        )
 
 
 if __name__ == "__main__":

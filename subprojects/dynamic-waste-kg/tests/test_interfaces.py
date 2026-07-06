@@ -36,6 +36,44 @@ class InterfaceTests(unittest.TestCase):
         self.assertEqual(obs.objects[0].class_name, "glass")
         self.assertEqual(obs.objects[0].confidence, 0.86)
 
+    def test_unknown_llm_review_is_not_ignored_when_less_confident(self) -> None:
+        packet = VisionPacket(
+            frame_id="frame_hazard",
+            source="camera",
+            detections=[
+                VisionDetection(
+                    temp_id="d1",
+                    yolo_class_name="gypsum_board",
+                    yolo_confidence=0.90,
+                    llm_class_name="unknown",
+                    llm_confidence=0.75,
+                    center_xyz=(0.1, 0.1, 0.0),
+                    risk_hint="high",
+                )
+            ],
+        )
+
+        obs = vision_packet_to_observation(packet)
+
+        self.assertEqual(obs.objects[0].class_name, "unknown")
+        self.assertEqual(obs.objects[0].confidence, 0.75)
+        self.assertEqual(obs.objects[0].metadata["review_status"], "human_review_required")
+        self.assertEqual(obs.objects[0].metadata["yolo_confidence"], 0.90)
+        self.assertEqual(obs.objects[0].metadata["llm_confidence"], 0.75)
+
+    def test_uncertain_visual_review_requires_human_review_even_if_category_matches(self) -> None:
+        detection = VisionDetection(
+            temp_id="d1",
+            yolo_class_name="glass",
+            yolo_confidence=0.80,
+            llm_class_name="glass",
+            llm_confidence=0.0,
+            metadata={"need_human_review": True, "review_decision": "uncertain"},
+        )
+
+        self.assertEqual(detection.review_status(), "human_review_required")
+        self.assertEqual(detection.resolved_confidence(), 0.80)
+
     def test_langgraph_state_contains_long_term_and_planning_context(self) -> None:
         graph = KnowledgeGraph()
         seed_default_categories(graph)

@@ -19,7 +19,15 @@ def build_planning_context(graph: KnowledgeGraph, task: Optional[Dict[str, Any]]
             if instance.class_name in target_categories or instance.risk_level in target_categories
         ]
 
-    active_instances.sort(key=lambda item: (item.priority, item.confidence, item.observation_count), reverse=True)
+    active_instances.sort(
+        key=lambda item: (
+            item.processable and item.task_status != "needs_review",
+            item.priority,
+            item.confidence,
+            item.observation_count,
+        ),
+        reverse=True,
+    )
     candidates = [instance.to_dict() for instance in active_instances[:max_candidates]]
 
     blocked = [
@@ -31,6 +39,11 @@ def build_planning_context(graph: KnowledgeGraph, task: Optional[Dict[str, Any]]
         instance.to_dict()
         for instance in active_instances
         if instance.risk_level in {"high", "critical", "hazardous"}
+    ]
+    review_required = [
+        instance.to_dict()
+        for instance in active_instances
+        if instance.task_status == "needs_review" or not instance.processable
     ]
     relations = [
         edge.to_dict()
@@ -45,6 +58,7 @@ def build_planning_context(graph: KnowledgeGraph, task: Optional[Dict[str, Any]]
         "candidates": candidates,
         "blocked": blocked,
         "risky": risky,
+        "review_required": review_required,
         "relations": relations,
         "graph_summary": {
             "category_count": len(graph.categories),

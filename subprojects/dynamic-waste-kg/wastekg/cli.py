@@ -20,7 +20,7 @@ def build_demo_graph() -> KnowledgeGraph:
         source="demo_sensor",
         objects=[
             DetectedObject(temp_id="t1", class_name="brick", confidence=0.96, center_xyz=(0.10, 0.10, 0.00)),
-            DetectedObject(temp_id="t2", class_name="waste_paint_can", confidence=0.91, center_xyz=(0.11, 0.11, 0.08), risk_level="high"),
+            DetectedObject(temp_id="t2", class_name="glass", confidence=0.91, center_xyz=(0.11, 0.11, 0.08), risk_level="medium"),
             DetectedObject(temp_id="t3", class_name="metal", confidence=0.88, center_xyz=(0.30, 0.20, 0.02)),
         ],
     )

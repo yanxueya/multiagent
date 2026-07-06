@@ -9,11 +9,12 @@ class LearningAttributeTests(unittest.TestCase):
         graph = KnowledgeGraph()
         graph.register_category(
             CategorySpec(
-                name="paint_can",
-                category="hazardous_waste",
-                material="metal",
-                risk_level="high",
+                name="glass",
+                category="building_waste",
+                material="silicate",
+                risk_level="medium",
                 graspability="low",
+                auto_processable=False,
             )
         )
 
@@ -24,7 +25,7 @@ class LearningAttributeTests(unittest.TestCase):
                 objects=[
                     DetectedObject(
                         temp_id="t1",
-                        class_name="paint_can",
+                        class_name="glass",
                         confidence=0.95,
                         center_xyz=(0.1, 0.1, 0.1),
                         risk_level="unknown",
@@ -33,10 +34,11 @@ class LearningAttributeTests(unittest.TestCase):
             )
         )
 
-        instance = graph.instances["paint_can_01"]
-        self.assertEqual(instance.risk_level, "high")
+        instance = graph.instances["glass_01"]
+        self.assertEqual(instance.risk_level, "medium")
+        self.assertFalse(instance.graspable)
         self.assertFalse(instance.processable)
-        self.assertEqual(graph.categories["paint_can"].material, "metal")
+        self.assertEqual(graph.categories["glass"].material, "silicate")
 
     def test_mark_processed_updates_task_status_and_events(self) -> None:
         graph = KnowledgeGraph()

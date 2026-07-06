@@ -1,0 +1,17 @@
+services:
+  neo4j:
+    image: neo4j:5-community
+    container_name: dynamic-waste-neo4j
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/wastekg123456
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 1G
+      NEO4J_server_memory_pagecache_size: 512m
+    volumes:
+      - ./artifacts/neo4j/data:/data
+      - ./artifacts/neo4j/logs:/logs
+      - ./artifacts/neo4j/import:/var/lib/neo4j/import
+      - ./artifacts/neo4j/plugins:/plugins

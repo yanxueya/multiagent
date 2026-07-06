@@ -15,6 +15,7 @@ from .models import (
     Observation,
     RelationEdge,
 )
+from .taxonomy import canonicalize_category_name
 
 
 class KnowledgeGraph:
@@ -40,6 +41,12 @@ class KnowledgeGraph:
                     "fragility": category.fragility,
                     "graspability": category.graspability,
                     "pollution_level": category.pollution_level,
+                    "recognition_difficulty": category.recognition_difficulty,
+                    "handling_mode": category.handling_mode,
+                    "grasp_difficulty": category.grasp_difficulty,
+                    "needs_llm_review": category.needs_llm_review,
+                    "auto_processable": category.auto_processable,
+                    "visual_prototype": {key: list(values) for key, values in category.visual_prototype.items()},
                 },
                 source="system",
             )
@@ -71,6 +78,10 @@ class KnowledgeGraph:
             orientation=instance.orientation or before.orientation,
             bbox_3d=instance.bbox_3d if instance.bbox_3d is not None else before.bbox_3d,
             confidence=max(before.confidence, instance.confidence),
+            yolo_confidence=max(before.yolo_confidence, instance.yolo_confidence),
+            llm_confidence=max(before.llm_confidence, instance.llm_confidence),
+            final_confidence=max(before.final_confidence, instance.final_confidence),
+            review_status=instance.review_status if instance.review_status != "not_reviewed" else before.review_status,
             priority=max(before.priority, instance.priority),
             processed_flag=before.processed_flag or instance.processed_flag,
             last_action=instance.last_action or before.last_action,
@@ -79,12 +90,19 @@ class KnowledgeGraph:
             fragility_level=instance.fragility_level or before.fragility_level,
             graspability_level=instance.graspability_level or before.graspability_level,
             pollution_level=instance.pollution_level or before.pollution_level,
+            handling_mode=instance.handling_mode or before.handling_mode,
+            grasp_difficulty=instance.grasp_difficulty or before.grasp_difficulty,
             occlusion_state=instance.occlusion_state or before.occlusion_state,
             contact_state=instance.contact_state or before.contact_state,
             support_state=instance.support_state or before.support_state,
             movable=before.movable and instance.movable,
             graspable=before.graspable and instance.graspable,
             processable=before.processable and instance.processable,
+            mask_polygon=instance.mask_polygon or before.mask_polygon,
+            boundary_points=instance.boundary_points or before.boundary_points,
+            visible_area_ratio=min(before.visible_area_ratio, instance.visible_area_ratio),
+            grasp_candidates=instance.grasp_candidates or before.grasp_candidates,
+            safe_grasp_score=max(before.safe_grasp_score, instance.safe_grasp_score),
             blocked_by=list(sorted(set(before.blocked_by + instance.blocked_by))),
             supports=list(sorted(set(before.supports + instance.supports))),
             task_relevance=max(before.task_relevance, instance.task_relevance),
@@ -243,8 +261,14 @@ class KnowledgeGraph:
             "fragility": spec.fragility,
             "graspability": spec.graspability,
             "pollution_level": spec.pollution_level,
+            "recognition_difficulty": spec.recognition_difficulty,
+            "handling_mode": spec.handling_mode,
+            "grasp_difficulty": spec.grasp_difficulty,
+            "needs_llm_review": spec.needs_llm_review,
+            "auto_processable": spec.auto_processable,
             "recyclability": spec.recyclability,
             "semantic_tags": list(spec.semantic_tags),
+            "visual_prototype": {key: list(values) for key, values in spec.visual_prototype.items()},
             "confidence_prior": spec.confidence_prior,
             "description": spec.description,
             "source_refs": list(spec.source_refs),
@@ -252,6 +276,7 @@ class KnowledgeGraph:
         }
 
     def _resolve_detection(self, detected: DetectedObject, frame_id: str, source: str) -> Tuple[ObjectInstance, bool]:
+        detected.class_name = canonicalize_category_name(detected.class_name)
         if detected.temp_id in self._track_map:
             instance_id = self._track_map[detected.temp_id]
             existing = self.instances[instance_id]
@@ -268,7 +293,17 @@ class KnowledgeGraph:
                     orientation=detected.orientation,
                     bbox_3d=detected.bbox_3d,
                     confidence=detected.confidence,
+                    yolo_confidence=detected.yolo_confidence,
+                    llm_confidence=detected.llm_confidence,
+                    final_confidence=detected.final_confidence or detected.confidence,
+                    review_status=detected.review_status,
                     risk_level=detected.risk_level,
+                    mask_polygon=list(detected.mask_polygon),
+                    boundary_points=list(detected.boundary_points),
+                    visible_area_ratio=detected.visible_area_ratio,
+                    occlusion_state=detected.occlusion_state,
+                    grasp_candidates=list(detected.grasp_candidates),
+                    safe_grasp_score=detected.safe_grasp_score,
                     fragility_level="unknown",
                     graspability_level="unknown",
                     pollution_level="unknown",
@@ -294,7 +329,17 @@ class KnowledgeGraph:
             orientation=detected.orientation or existing.orientation,
             bbox_3d=detected.bbox_3d if detected.bbox_3d is not None else existing.bbox_3d,
             confidence=max(existing.confidence, detected.confidence),
+            yolo_confidence=max(existing.yolo_confidence, detected.yolo_confidence),
+            llm_confidence=max(existing.llm_confidence, detected.llm_confidence),
+            final_confidence=max(existing.final_confidence, detected.final_confidence or detected.confidence),
+            review_status=detected.review_status if detected.review_status != "not_reviewed" else existing.review_status,
             risk_level=detected.risk_level if detected.risk_level != "unknown" else existing.risk_level,
+            mask_polygon=list(detected.mask_polygon) or existing.mask_polygon,
+            boundary_points=list(detected.boundary_points) or existing.boundary_points,
+            visible_area_ratio=detected.visible_area_ratio,
+            occlusion_state=detected.occlusion_state if detected.occlusion_state != "unknown" else existing.occlusion_state,
+            grasp_candidates=list(detected.grasp_candidates) or existing.grasp_candidates,
+            safe_grasp_score=max(existing.safe_grasp_score, detected.safe_grasp_score),
             task_status="active" if not existing.processed_flag else existing.task_status,
             observed_aliases=list(sorted(set(existing.observed_aliases + [detected.temp_id]))),
             last_seen_frame=frame_id,
@@ -305,6 +350,8 @@ class KnowledgeGraph:
             fragility_level=existing.fragility_level,
             graspability_level=existing.graspability_level,
             pollution_level=existing.pollution_level,
+            handling_mode=existing.handling_mode,
+            grasp_difficulty=existing.grasp_difficulty,
         )
         return merged
 
@@ -343,8 +390,18 @@ class KnowledgeGraph:
         instance.fragility_level = spec.fragility if instance.fragility_level == "unknown" else instance.fragility_level
         instance.graspability_level = spec.graspability if instance.graspability_level == "unknown" else instance.graspability_level
         instance.pollution_level = spec.pollution_level if instance.pollution_level == "unknown" else instance.pollution_level
-        instance.graspable = instance.graspability_level in {"low", "medium"}
-        instance.processable = instance.processable and spec.risk_level not in {"high", "critical", "hazardous"}
+        instance.handling_mode = spec.handling_mode if instance.handling_mode == "human_review" else instance.handling_mode
+        instance.grasp_difficulty = spec.grasp_difficulty if instance.grasp_difficulty == "unknown" else instance.grasp_difficulty
+        instance.graspable = instance.graspability_level in {"medium", "high"}
+        instance.processable = (
+            instance.processable
+            and instance.graspable
+            and spec.auto_processable
+            and spec.handling_mode in {"robot_grasp", "robot_with_supervision"}
+            and spec.risk_level not in {"high", "critical", "hazardous"}
+        )
+        if spec.needs_llm_review and instance.confidence < 0.9:
+            instance.task_status = "needs_review"
 
     def _infer_relations(self, detected_objects: Iterable[DetectedObject]) -> List[DetectedRelation]:
         objects = list(detected_objects)
