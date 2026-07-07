@@ -1,3 +1,5 @@
+"""验证 test llm reviewer 相关功能。"""
+
 import json
 import os
 import tempfile
@@ -5,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from wastekg.llm_reviewer import LLMReviewerConfig, OpenAICompatibleReviewer
+from wastekg.llm.reviewer import LLMReviewerConfig, OpenAICompatibleReviewer
 
 
 class FakeHTTPResponse:

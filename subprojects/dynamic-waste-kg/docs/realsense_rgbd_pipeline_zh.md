@@ -40,10 +40,10 @@ wastekg/rgbd_io.py
 wastekg/realsense_bridge.py
   可选 RealSense 采集接口。只有真正采集时才需要 pyrealsense2。
 
-scripts/capture_realsense_frame.py
+scripts/rgbd/capture_realsense_frame.py
   从 RealSense 保存 color.png、aligned_depth.png、camera_intrinsics.json。
 
-scripts/predict_rgbd_to_graph.py
+scripts/rgbd/predict_rgbd_to_graph.py
   读取 RGB-D 文件，运行 YOLO，并导出知识图谱。
 ```
 
@@ -111,7 +111,7 @@ python -m pip install pyrealsense2
 确认虚拟环境已激活后运行：
 
 ```bash
-python scripts/capture_realsense_frame.py \
+python scripts/rgbd/capture_realsense_frame.py \
   --out artifacts/captures/frame_001 \
   --width 640 \
   --height 480 \
@@ -141,11 +141,11 @@ artifacts/captures/frame_001/
 命令示例：
 
 ```bash
-python scripts/predict_rgbd_to_graph.py \
+python scripts/rgbd/predict_rgbd_to_graph.py \
   --image artifacts/captures/frame_001/color.png \
   --depth artifacts/captures/frame_001/aligned_depth.png \
   --intrinsics artifacts/captures/frame_001/camera_intrinsics.json \
-  --weights runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/weights/best.pt \
+  --weights outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/weights/best.pt \
   --out artifacts/rgbd_graph_frame_001 \
   --conf 0.5 \
   --imgsz 640 \
@@ -156,11 +156,11 @@ python scripts/predict_rgbd_to_graph.py \
 如果 Ubuntu 中没有 GPU 版 PyTorch，可以先用 CPU 验证：
 
 ```bash
-python scripts/predict_rgbd_to_graph.py \
+python scripts/rgbd/predict_rgbd_to_graph.py \
   --image artifacts/captures/frame_001/color.png \
   --depth artifacts/captures/frame_001/aligned_depth.png \
   --intrinsics artifacts/captures/frame_001/camera_intrinsics.json \
-  --weights runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/weights/best.pt \
+  --weights outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/weights/best.pt \
   --out artifacts/rgbd_graph_frame_001 \
   --conf 0.5 \
   --imgsz 640 \
@@ -203,7 +203,7 @@ safe_grasp_score
 命令示例：
 
 ```bash
-python scripts/import_neo4j_cypher.py \
+python scripts/graph/import_neo4j_cypher.py \
   --cypher artifacts/rgbd_graph_frame_001/neo4j_import.cypher \
   --uri bolt://localhost:7687 \
   --user neo4j \

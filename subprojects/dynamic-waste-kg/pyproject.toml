@@ -9,6 +9,5 @@ description = "Dynamic waste knowledge graph prototype for perception, planning,
 readme = "README.md"
 requires-python = ">=3.10"
 
-[tool.setuptools]
-packages = ["wastekg"]
-
+[tool.setuptools.packages.find]
+include = ["wastekg*"]

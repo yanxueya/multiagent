@@ -1,3 +1,5 @@
+"""验证 test yolo evaluation 相关功能。"""
+
 import csv
 import json
 import subprocess
@@ -6,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from wastekg.yolo_evaluation import build_segmentation_evaluation_summary, write_evaluation_artifacts
+from wastekg.yolo.evaluation import build_segmentation_evaluation_summary, write_evaluation_artifacts
 
 
 class _FakeMetric:
@@ -31,7 +33,7 @@ class YoloEvaluationTests(unittest.TestCase):
         project_root = Path(__file__).resolve().parents[1]
 
         completed = subprocess.run(
-            [sys.executable, "scripts/evaluate_yolo_seg.py", "--help"],
+            [sys.executable, "scripts/yolo/evaluate_yolo_seg.py", "--help"],
             cwd=project_root,
             check=False,
             capture_output=True,

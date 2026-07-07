@@ -1,7 +1,9 @@
+"""验证 test update 相关功能。"""
+
 import unittest
 
-from wastekg.models import DetectedObject, DetectedRelation, Observation
-from wastekg.store import KnowledgeGraph
+from wastekg.core.models import DetectedObject, DetectedRelation, Observation
+from wastekg.graph.store import KnowledgeGraph
 
 
 class UpdateTests(unittest.TestCase):

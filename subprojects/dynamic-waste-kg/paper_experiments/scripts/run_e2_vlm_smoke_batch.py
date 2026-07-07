@@ -1,3 +1,5 @@
+"""运行 run e2 vlm smoke batch 小论文实验入口。"""
+
 from __future__ import annotations
 
 import argparse
@@ -18,11 +20,11 @@ from wastekg import (
     apply_perception_records_to_graph,
     seed_default_categories,
 )
-from wastekg.exporters import graph_events_to_jsonl, graph_to_json_snapshot
-from wastekg.paper_e2_batch import select_image_paths, summarize_review_rows, write_batch_outputs
-from wastekg.ultralytics_runtime import prepare_ultralytics_runtime
-from wastekg.visual_review_evidence import attach_visual_evidence_to_records
-from wastekg.yolo_image_pipeline import records_from_yolo_result
+from wastekg.graph.exporters import graph_events_to_jsonl, graph_to_json_snapshot
+from wastekg.paper.e2_batch import select_image_paths, summarize_review_rows, write_batch_outputs
+from wastekg.yolo.ultralytics_runtime import prepare_ultralytics_runtime
+from wastekg.yolo.visual_review_evidence import attach_visual_evidence_to_records
+from wastekg.yolo.image_pipeline import records_from_yolo_result
 
 
 def _build_parser() -> argparse.ArgumentParser:

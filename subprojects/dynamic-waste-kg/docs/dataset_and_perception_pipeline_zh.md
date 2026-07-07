@@ -28,7 +28,7 @@ datasets/waste12_yolo/
 
 `data.yaml` 可以直接给 Ultralytics YOLO 训练使用。
 
-## 2. 当前 12 类
+## 2. 当前 11 类
 
 训练类别和长期知识层保持一致：
 
@@ -44,8 +44,11 @@ soft_plastic
 hard_plastic
 paperboard
 glass
-asbestos_suspect
 ```
+
+`unknown` 不是训练类别，而是系统在低置信度、证据冲突或无法可靠归类时生成的人工复核状态。
+
+`asbestos` / `asbestos_suspect` 不进入当前 YOLO 训练类别；如外部数据或人工记录中出现相关标记，应映射为 `unknown` 或人工复核事件。
 
 ## 3. 标签映射
 
@@ -57,7 +60,7 @@ asbestos_suspect
 - `cardboard` -> `paperboard`
 - `timber` -> `wood`
 - `gypsum` -> `gypsum_board`
-- `asbestos` -> `asbestos_suspect`
+- `asbestos` / `asbestos_suspect` -> `unknown` 或人工复核事件，不写入 YOLO 标签
 
 没有可靠语料支撑的类别不会强行加入默认训练类别，例如 `asphalt`、`waste_paint_can`、`mixed_general_waste`。
 
@@ -66,10 +69,10 @@ asbestos_suspect
 在 `subprojects/dynamic-waste-kg` 目录下运行：
 
 ```powershell
-python -m wastekg.dataset_builder `
-  --codd-root "D:\可能有用的data\Construction and Demolition Waste Object Detection Dataset  (CODD)" `
-  --instance-seg-root "D:\可能有用的data\1. Instance Segmentation" `
-  --output-root "C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\datasets\waste12_yolo"
+python scripts\data\build_grouped_dataset.py `
+  --source datasets\waste12_yolo `
+  --out datasets\waste12_grouped_candidate_v1 `
+  --seed 0
 ```
 
 运行后会生成：
@@ -104,23 +107,23 @@ YOLO/YOLO-seg
 
 当前项目中对应代码是：
 
-- `wastekg.dataset_builder`：把数据集转成 YOLO 可训练格式；
-- `wastekg.perception_pipeline`：把 YOLO 结果和复核结果写入知识图谱；
-- `wastekg.vision_bridge`：把字典/JSON 结果转成 `VisionPacket`；
-- `wastekg.interfaces`：提供 LangGraph 和 ROS2 出口。
+- `wastekg.data.grouping`：把数据集整理为 YOLO 可训练格式；
+- `wastekg.perception.pipeline`：把 YOLO 结果和复核结果写入知识图谱；
+- `wastekg.perception.vision_bridge`：把字典/JSON 结果转成 `VisionPacket`；
+- `wastekg.interfaces.contracts`：提供 LangGraph 和 ROS2 出口。
 
 ## 7. 训练 YOLO 分割模型
 
 项目里提供了一个可选训练脚本：
 
 ```text
-scripts/train_yolo_seg.py
+scripts/yolo/train_yolo_seg.py
 ```
 
-安装好 Ultralytics 后，可以在 `subprojects/dynamic-waste-kg` 下运行：
+安装好 Ultralytics 后，可以在 `subprojects/dynamic-waste-kg` 下运行下列命令。涉及模型训练时，AI 代理只应输出操作指令，不应在沙盒中直接启动训练；请由用户在本机确认显存后自行运行：
 
 ```powershell
-python scripts/train_yolo_seg.py `
+python scripts/yolo/train_yolo_seg.py `
   --data datasets/waste12_yolo/data.yaml `
   --model yolo11n-seg.pt `
   --epochs 80 `

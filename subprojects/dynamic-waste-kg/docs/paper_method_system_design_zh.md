@@ -230,13 +230,13 @@ CUDA runtime used by PyTorch: 12.8
 主模型训练目录：
 
 ```text
-runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50
+outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50
 ```
 
 主要参数来自：
 
 ```text
-runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/args.yaml
+outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/args.yaml
 ```
 
 关键训练配置：
@@ -260,7 +260,7 @@ runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/args.yaml
 训练命令形式：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\train_yolo_seg.py `
+.\.venv\Scripts\python.exe scripts\yolo\train_yolo_seg.py `
   --data datasets\waste12_yolo\data.yaml `
   --model yolo11n-seg.pt `
   --epochs 50 `
@@ -311,23 +311,23 @@ runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/args.yaml
 
 训练曲线：
 
-![Training results](../runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/results.png)
+![Training results](../outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/results.png)
 
 混淆矩阵：
 
-![Confusion matrix](../runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/confusion_matrix.png)
+![Confusion matrix](../outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/confusion_matrix.png)
 
 归一化混淆矩阵：
 
-![Normalized confusion matrix](../runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/confusion_matrix_normalized.png)
+![Normalized confusion matrix](../outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/confusion_matrix_normalized.png)
 
 Mask PR 曲线：
 
-![Mask PR curve](../runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/MaskPR_curve.png)
+![Mask PR curve](../outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/MaskPR_curve.png)
 
 验证集预测示例：
 
-![Validation prediction](../runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/val_batch0_pred.jpg)
+![Validation prediction](../outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/val_batch0_pred.jpg)
 
 ### 5.3 对机械臂抓取的影响
 
@@ -654,9 +654,9 @@ foam
 本次单图实验命令：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\predict_image_to_graph.py `
+.\.venv\Scripts\python.exe scripts\graph\predict_image_to_graph.py `
   --image datasets\waste12_yolo\images\val\instseg_mix07_rgb_0038_png_jpg.rf.f85422203eb2cdf1f58a20d17d16fc25.jpg `
-  --weights runs\segment\runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt `
+  --weights outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt `
   --out artifacts\single_image_llm_demo `
   --conf 0.5 `
   --device 0 `
@@ -787,8 +787,8 @@ metadata_json
 wastekg/rgbd_geometry.py
 wastekg/rgbd_io.py
 wastekg/realsense_bridge.py
-scripts/capture_realsense_frame.py
-scripts/predict_rgbd_to_graph.py
+scripts/rgbd/capture_realsense_frame.py
+scripts/rgbd/predict_rgbd_to_graph.py
 ```
 
 RealSense 接入后，系统将保存：
@@ -942,21 +942,21 @@ movable
 
 ```powershell
 cd C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg
-.\.venv\Scripts\python.exe scripts\check_llm_config.py
+.\.venv\Scripts\python.exe scripts\llm\check_llm_config.py
 ```
 
 ### 16.2 大模型 live 测试
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\check_llm_config.py --live
+.\.venv\Scripts\python.exe scripts\llm\check_llm_config.py --live
 ```
 
 ### 16.3 单图 YOLO + 大模型 + 图谱导出
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\predict_image_to_graph.py `
+.\.venv\Scripts\python.exe scripts\graph\predict_image_to_graph.py `
   --image datasets\waste12_yolo\images\val\instseg_mix07_rgb_0038_png_jpg.rf.f85422203eb2cdf1f58a20d17d16fc25.jpg `
-  --weights runs\segment\runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt `
+  --weights outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt `
   --out artifacts\single_image_llm_demo `
   --conf 0.5 `
   --device 0 `
@@ -967,7 +967,7 @@ cd C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg
 ### 16.4 导入 Neo4j
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\import_neo4j_cypher.py `
+.\.venv\Scripts\python.exe scripts\graph\import_neo4j_cypher.py `
   --cypher artifacts\single_image_llm_demo\neo4j_import.cypher `
   --uri bolt://localhost:7687 `
   --user neo4j `
@@ -993,10 +993,10 @@ OK
 
 | 图 | 路径 | 建议用途 |
 |---|---|---|
-| 训练曲线 | `runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/results.png` | 模型训练收敛与验证指标 |
-| 混淆矩阵 | `runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/confusion_matrix.png` | 类别混淆分析 |
-| Mask PR 曲线 | `runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/MaskPR_curve.png` | 分割性能分析 |
-| 验证集预测 | `runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/val_batch0_pred.jpg` | 模型预测可视化 |
+| 训练曲线 | `outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/results.png` | 模型训练收敛与验证指标 |
+| 混淆矩阵 | `outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/confusion_matrix.png` | 类别混淆分析 |
+| Mask PR 曲线 | `outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/MaskPR_curve.png` | 分割性能分析 |
+| 验证集预测 | `outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/val_batch0_pred.jpg` | 模型预测可视化 |
 | 单图预测 | `artifacts/single_image_llm_demo/prediction/instseg_mix07_rgb_0038_png_jpg.rf.f85422203eb2cdf1f58a20d17d16fc25.jpg` | YOLO + 图谱示例 |
 | Mermaid 图谱 | `artifacts/single_image_llm_demo/graph.mmd` | 图谱结构示意 |
 | Neo4j Cypher | `artifacts/single_image_llm_demo/neo4j_import.cypher` | 图数据库复现 |

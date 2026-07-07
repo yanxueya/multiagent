@@ -1,6 +1,8 @@
+"""验证 test paper visual scope 相关功能。"""
+
 import unittest
 
-from wastekg.taxonomy import KNOWN_VISUAL_CLASSES, PAPER_VISUAL_CLASSES, UNKNOWN_CATEGORY, WASTE12_CLASSES
+from wastekg.core.taxonomy import KNOWN_VISUAL_CLASSES, PAPER_VISUAL_CLASSES, UNKNOWN_CATEGORY, WASTE12_CLASSES
 
 
 class PaperVisualScopeTests(unittest.TestCase):

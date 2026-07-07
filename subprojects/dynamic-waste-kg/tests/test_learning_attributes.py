@@ -1,7 +1,9 @@
+"""验证 test learning attributes 相关功能。"""
+
 import unittest
 
-from wastekg.models import CategorySpec, DetectedObject, Observation
-from wastekg.store import KnowledgeGraph
+from wastekg.core.models import CategorySpec, DetectedObject, Observation
+from wastekg.graph.store import KnowledgeGraph
 
 
 class LearningAttributeTests(unittest.TestCase):

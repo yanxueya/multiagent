@@ -7,7 +7,7 @@
 ## 冻结配置
 
 - 数据：`datasets/waste11_grouped_v1/data.yaml`
-- 权重：`runs/paper_e1/yolo11n_seg_waste11_grouped_e50_v1/weights/best.pt`
+- 权重：`outputs/yolo_runs/paper_e1/yolo11n_seg_waste11_grouped_e50_v1/weights/best.pt`
 - 测试输出：`artifacts/e1_test_evaluation_r2`
 - 设备：RTX 5060 Laptop GPU，PyTorch nightly cu128
 

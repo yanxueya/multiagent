@@ -1,3 +1,5 @@
+"""验证 test dataset audit 相关功能。"""
+
 import json
 import shutil
 import subprocess
@@ -8,7 +10,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from wastekg.dataset_audit import audit_dataset, write_audit_artifacts
+from wastekg.data.audit import audit_dataset, write_audit_artifacts
 
 
 CLASS_NAMES = [
@@ -23,7 +25,6 @@ CLASS_NAMES = [
     "hard_plastic",
     "paperboard",
     "glass",
-    "asbestos_suspect",
 ]
 
 
@@ -161,7 +162,7 @@ class DatasetAuditTests(unittest.TestCase):
             completed = subprocess.run(
                 [
                     sys.executable,
-                    "scripts/audit_waste12_dataset.py",
+                    "scripts/data/audit_waste12_dataset.py",
                     "--dataset",
                     str(root),
                     "--out",

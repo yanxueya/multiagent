@@ -1,6 +1,8 @@
+"""验证 test models 相关功能。"""
+
 import unittest
 
-from wastekg.models import CategorySpec, DetectedObject, GraphEvent, ObjectInstance, Observation, RelationEdge
+from wastekg.core.models import CategorySpec, DetectedObject, GraphEvent, ObjectInstance, Observation, RelationEdge
 
 
 class ModelTests(unittest.TestCase):

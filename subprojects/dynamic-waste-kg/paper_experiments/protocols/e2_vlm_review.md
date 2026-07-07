@@ -80,9 +80,9 @@ decision_counts = agree: 8, change: 0, uncertain: 5, review_error: 4, not_review
 ## 解除阻塞后的最小测试
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\predict_image_to_graph.py `
+.\.venv\Scripts\python.exe scripts\graph\predict_image_to_graph.py `
   --image datasets\waste12_yolo\images\val\instseg_mix07_rgb_0038_png_jpg.rf.f85422203eb2cdf1f58a20d17d16fc25.jpg `
-  --weights runs\segment\runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt `
+  --weights outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt `
   --out artifacts\single_image_vlm_smoke `
   --conf 0.5 `
   --device 0 `

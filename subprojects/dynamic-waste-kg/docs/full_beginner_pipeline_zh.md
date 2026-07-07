@@ -143,7 +143,7 @@ datasets\waste12_yolo\data.yaml
 - 验证集：984 张；
 - 测试集：715 张。
 
-注意：当前数据里没有 `glass` 和 `asbestos_suspect` 的正样本。这两个类别保留在知识图谱里，但当前 YOLO 训练主要依赖其他 10 类。
+注意：当前视觉训练口径是 11 个明确类别。`unknown` 是系统生成的人工复核状态，不是 YOLO 类别；`asbestos_suspect` 不再作为当前训练类别或默认长期类别。
 
 ## 7. 如果要重新生成数据集
 
@@ -173,7 +173,7 @@ datasets\waste12_yolo\dataset_summary.json
 然后运行：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\train_yolo_seg.py `
+.\.venv\Scripts\python.exe scripts\yolo\train_yolo_seg.py `
   --data datasets\waste12_yolo\data.yaml `
   --model yolo11n-seg.pt `
   --epochs 3 `
@@ -185,7 +185,7 @@ datasets\waste12_yolo\dataset_summary.json
 如果显存不够，把 `batch` 改小，比如：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\train_yolo_seg.py `
+.\.venv\Scripts\python.exe scripts\yolo\train_yolo_seg.py `
   --data datasets\waste12_yolo\data.yaml `
   --model yolo11n-seg.pt `
   --epochs 3 `
@@ -199,7 +199,7 @@ datasets\waste12_yolo\dataset_summary.json
 训练结果通常会在：
 
 ```powershell
-runs\waste12_seg
+outputs\yolo_runs\waste12_seg
 ```
 
 里面会有模型权重，例如：
@@ -217,7 +217,7 @@ YOLO 负责快速识别。
 
 - YOLO 置信度不高；
 - 类别容易混淆；
-- 目标是 `glass`、`asbestos_suspect` 等高风险对象；
+- 目标是 `glass`、`gypsum_board` 等易碎、易混淆或处理风险较高对象；
 - 规划前需要人工确认。
 
 当前项目已经有接口，不要求你一开始就训练真正的大模型。
@@ -301,7 +301,7 @@ http://localhost:7474
 运行：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\export_demo_neo4j.py --out artifacts\demo_graph
+.\.venv\Scripts\python.exe scripts\graph\export_demo_neo4j.py --out artifacts\demo_graph
 ```
 
 会生成：
@@ -318,7 +318,7 @@ artifacts\demo_graph\graph.mmd
 确认 Docker 里的 Neo4j 已经启动后运行：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\import_neo4j_cypher.py `
+.\.venv\Scripts\python.exe scripts\graph\import_neo4j_cypher.py `
   --cypher artifacts\demo_graph\neo4j_import.cypher `
   --uri bolt://localhost:7687 `
   --user neo4j `

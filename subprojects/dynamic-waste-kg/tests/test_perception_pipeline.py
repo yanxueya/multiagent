@@ -1,7 +1,9 @@
+"""验证 test perception pipeline 相关功能。"""
+
 import unittest
 
 from wastekg import KnowledgeGraph, ReviewResult, apply_perception_records_to_graph, seed_default_categories
-from wastekg.perception_pipeline import build_records_with_optional_review
+from wastekg.perception.pipeline import build_records_with_optional_review
 
 
 class FakeReviewer:

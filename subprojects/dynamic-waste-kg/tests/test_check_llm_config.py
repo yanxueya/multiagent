@@ -1,6 +1,8 @@
+"""验证 test check llm config 相关功能。"""
+
 import unittest
 
-from scripts.check_llm_config import mask_secret
+from scripts.llm.check_llm_config import mask_secret
 
 
 class CheckLlmConfigTests(unittest.TestCase):

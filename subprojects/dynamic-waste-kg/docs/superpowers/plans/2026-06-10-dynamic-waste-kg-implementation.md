@@ -13,13 +13,13 @@
 ### Task 1: Define the graph data model
 
 **Files:**
-- Create: `wastekg/models.py`
+- Create: `wastekg/core/models.py`
 - Test: `tests/test_models.py`
 
 - [ ] **Step 1: Write the failing test**
 
 ```python
-from wastekg.models import CategorySpec, ObjectInstance, RelationEdge, Observation, GraphEvent
+from wastekg.core.models import CategorySpec, ObjectInstance, RelationEdge, Observation, GraphEvent
 
 def test_models_store_expected_fields():
     category = CategorySpec(name="brick", category="building_waste", material="ceramic", risk_level="low")
@@ -78,21 +78,21 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add wastekg/models.py tests/test_models.py
+git add wastekg/core/models.py tests/test_models.py
 git commit -m "feat: add graph data models"
 ```
 
 ### Task 2: Implement the in-memory graph store
 
 **Files:**
-- Create: `wastekg/store.py`
+- Create: `wastekg/graph/store.py`
 - Test: `tests/test_store.py`
 
 - [ ] **Step 1: Write the failing test**
 
 ```python
-from wastekg.models import CategorySpec, Observation
-from wastekg.store import KnowledgeGraph
+from wastekg.core.models import CategorySpec, Observation
+from wastekg.graph.store import KnowledgeGraph
 
 def test_register_category_and_upsert_instance():
     graph = KnowledgeGraph()
@@ -132,21 +132,21 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add wastekg/store.py tests/test_store.py
+git add wastekg/graph/store.py tests/test_store.py
 git commit -m "feat: add in-memory graph store"
 ```
 
 ### Task 3: Add incremental update and relation extraction
 
 **Files:**
-- Modify: `wastekg/store.py`
+- Modify: `wastekg/graph/store.py`
 - Create: `tests/test_update.py`
 
 - [ ] **Step 1: Write the failing test**
 
 ```python
-from wastekg.models import Observation, DetectedObject
-from wastekg.store import KnowledgeGraph
+from wastekg.core.models import Observation, DetectedObject
+from wastekg.graph.store import KnowledgeGraph
 
 def test_upsert_instance_and_relation_update():
     graph = KnowledgeGraph()
@@ -178,20 +178,20 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add wastekg/store.py tests/test_update.py
+git add wastekg/graph/store.py tests/test_update.py
 git commit -m "feat: add incremental graph updates"
 ```
 
 ### Task 4: Expose multi-agent query helpers
 
 **Files:**
-- Create: `wastekg/query.py`
+- Create: `wastekg/graph/query.py`
 - Test: `tests/test_query.py`
 
 - [ ] **Step 1: Write the failing test**
 
 ```python
-from wastekg.query import build_planning_context
+from wastekg.graph.query import build_planning_context
 
 def test_build_planning_context_returns_task_ready_view():
     context = build_planning_context(...)
@@ -218,14 +218,14 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add wastekg/query.py tests/test_query.py
+git add wastekg/graph/query.py tests/test_query.py
 git commit -m "feat: add planning query helpers"
 ```
 
 ### Task 5: Add CLI demo and project documentation
 
 **Files:**
-- Create: `wastekg/cli.py`
+- Create: `wastekg/graph/cli.py`
 - Create: `README.md`
 - Create: `pyproject.toml`
 
@@ -267,4 +267,3 @@ git commit -m "feat: add cli demo and docs"
 1. Spec coverage: The plan covers graph data models, in-memory storage, incremental updates, planning-context queries, and demo/docs.
 2. Placeholder scan: Replaced vague steps with explicit test and implementation targets; only remaining ellipses are in example snippets for brevity where exact structure will be defined in code.
 3. Type consistency: Data model names (`CategorySpec`, `ObjectInstance`, `Observation`, `GraphEvent`) are used consistently across tasks.
-

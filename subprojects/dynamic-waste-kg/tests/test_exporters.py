@@ -1,8 +1,10 @@
+"""验证 test exporters 相关功能。"""
+
 import unittest
 
 from wastekg import graph_events_to_jsonl, graph_to_mermaid, graph_to_neo4j_cypher, seed_default_categories
-from wastekg.models import DetectedObject, Observation
-from wastekg.store import KnowledgeGraph
+from wastekg.core.models import DetectedObject, Observation
+from wastekg.graph.store import KnowledgeGraph
 
 
 class ExporterTests(unittest.TestCase):

@@ -1,6 +1,8 @@
+"""验证 test paper e4 image sequence 相关功能。"""
+
 import unittest
 
-from wastekg.paper_e4_image_sequence import (
+from wastekg.paper.e4_image_sequence import (
     SequenceDetection,
     bbox_iou,
     match_image_sequence_detections,

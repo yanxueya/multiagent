@@ -1,7 +1,9 @@
+"""验证 test store 相关功能。"""
+
 import unittest
 
-from wastekg.models import CategorySpec, Observation
-from wastekg.store import KnowledgeGraph
+from wastekg.core.models import CategorySpec, Observation
+from wastekg.graph.store import KnowledgeGraph
 
 
 class StoreTests(unittest.TestCase):

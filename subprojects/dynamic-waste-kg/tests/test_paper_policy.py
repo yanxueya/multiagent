@@ -1,10 +1,12 @@
+"""验证 test paper policy 相关功能。"""
+
 from __future__ import annotations
 
 import unittest
 
-from wastekg.knowledge_base import DEFAULT_CATEGORY_SPECS
-from wastekg.models import ObjectInstance
-from wastekg.paper_policy import (
+from wastekg.core.knowledge_base import DEFAULT_CATEGORY_SPECS
+from wastekg.core.models import ObjectInstance
+from wastekg.paper.policy import (
     AUTO_CANDIDATE,
     HUMAN_REVIEW_REQUIRED,
     SUPERVISED_CANDIDATE,

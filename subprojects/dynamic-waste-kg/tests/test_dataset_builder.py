@@ -1,9 +1,11 @@
+"""验证 test dataset builder 相关功能。"""
+
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
-from wastekg.dataset_builder import build_dataset
+from wastekg.data.builder import build_dataset
 
 
 class DatasetBuilderTests(unittest.TestCase):

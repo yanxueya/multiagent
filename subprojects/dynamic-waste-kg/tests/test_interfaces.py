@@ -1,3 +1,5 @@
+"""验证 test interfaces 相关功能。"""
+
 import unittest
 
 from wastekg import (

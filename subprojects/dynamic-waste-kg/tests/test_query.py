@@ -1,8 +1,10 @@
+"""验证 test query 相关功能。"""
+
 import unittest
 
-from wastekg.models import DetectedObject, Observation
-from wastekg.query import build_planning_context
-from wastekg.store import KnowledgeGraph
+from wastekg.core.models import DetectedObject, Observation
+from wastekg.graph.query import build_planning_context
+from wastekg.graph.store import KnowledgeGraph
 
 
 class QueryTests(unittest.TestCase):

@@ -1,10 +1,12 @@
+"""验证 test visual review evidence 相关功能。"""
+
 import tempfile
 import unittest
 from pathlib import Path
 
 from PIL import Image
 
-from wastekg.visual_review_evidence import attach_visual_evidence_to_records, create_visual_review_evidence
+from wastekg.yolo.visual_review_evidence import attach_visual_evidence_to_records, create_visual_review_evidence
 
 
 class VisualReviewEvidenceTests(unittest.TestCase):

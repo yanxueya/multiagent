@@ -1,6 +1,6 @@
 # Dynamic Waste Knowledge Graph
 
-本子项目是“复杂动态建筑环境中的建筑废弃物认知与人机协同决策”项目的知识图谱与世界模型层。
+本子项目是动态建筑废弃物系统的知识图谱与世界模型层。它负责数据处理、感知结果接入、知识状态维护、VLM/LLM 复核、RGB-D 辅助、图谱导出和面向未来多智能体/ROS2 的结构化接口。
 
 当前稳定设计：
 
@@ -8,84 +8,66 @@
 11 个明确视觉类别 + 系统逻辑生成 unknown
 ```
 
-YOLO 负责检测和实例分割明确类别；VLM 不直接自由识别物体，而是提取结构化视觉属性并检查这些属性是否支持 YOLO 的类别假设；知识图谱负责长期类别先验、短期实例状态、unknown 记忆入口、事件日志和规划接口。
-
----
+YOLO 负责检测和实例分割明确类别；VLM/LLM 只做结构化视觉属性复核和一致性判断；知识图谱负责长期类别先验、短期实例状态、`unknown` 复核入口、事件日志和规划接口。
 
 ## 快速入口
 
-第一次阅读建议按顺序看：
-
 1. [文档导航](docs/README.md)
 2. [长期知识层种子说明](docs/knowledge_seed_zh.md)
-3. [论文方法与系统设计沉淀文档](docs/paper_method_system_design_zh.md)
-4. [从零开始运行完整流程](docs/full_beginner_pipeline_zh.md)
-5. [Neo4j 存储与可视化建议](docs/neo4j_storage_zh.md)
-6. [RealSense RGB-D 接入教程](docs/realsense_rgbd_pipeline_zh.md)
+3. [数据集处理与感知流水线](docs/dataset_and_perception_pipeline_zh.md)
+4. [YOLO + 大模型接入指南](docs/yolo_llm_integration_zh.md)
+5. [RealSense RGB-D 接入教程](docs/realsense_rgbd_pipeline_zh.md)
+6. [Neo4j 存储与可视化建议](docs/neo4j_storage_zh.md)
 
----
-
-## 当前职责边界
-
-`dynamic-waste-kg` 只负责知识图谱与世界模型，不直接控制机械臂，也不承担最终 UI。
-
-它应该负责：
-
-- 长期类别知识；
-- 短期对象记忆；
-- unknown 对象记忆入口；
-- 事件日志；
-- YOLO/RealSense/VLM 到图谱的输入适配；
-- Neo4j 导出和可视化；
-- 给 LangGraph 与 ROS2 输出规划状态。
-
-后续推荐整体项目结构：
+## 当前结构
 
 ```text
-multiagent/
-  subprojects/
-    dynamic-waste-kg/       # 知识图谱与世界模型
-    dynamic-waste-agent/    # LangGraph 多智能体规划
-    dynamic-waste-ros2/     # Ubuntu/ROS2 机械臂执行层
-    dynamic-waste-ui/       # 人工复核与监控界面
-    dynamic-waste-sim/      # 可选仿真环境
+dynamic-waste-kg/
+  wastekg/
+    core/          # 类别体系、数据模型、长期知识种子
+    data/          # 数据集审计、合并、冻结、分组
+    yolo/          # YOLO runtime、图像预测、分割评估
+    llm/           # OpenAI-compatible/DeepSeek 复核器
+    perception/    # 感知流水线与 VisionPacket 适配
+    rgbd/          # RealSense、RGB-D IO、几何补全
+    graph/         # 内存图谱、查询、JSON/Mermaid/Neo4j 导出
+    interfaces/    # LangGraph/ROS2 对接契约
+    paper/         # 小论文实验可复用逻辑
+  scripts/
+    data/          # 数据处理命令行入口
+    yolo/          # YOLO 训练、评估、样本筛选入口
+    llm/           # LLM 配置检查入口
+    rgbd/          # RGB-D 采集和接入入口
+    graph/         # 图谱预测、Neo4j 导入导出入口
+    paper/         # 论文实验样本导出入口
+    tools/         # 可复用小工具
+  docs/            # 当前主线关键文档
+  datasets/docs/   # 数据来源、合并、清洗、审计和中间数据处理说明
+  paper_experiments/
+  tests/
 ```
 
-核心数据流：
+旧的根目录扁平兼容包装已移除。新代码必须导入领域子包，例如 `wastekg.core.models`、`wastekg.data.audit`、`wastekg.llm.reviewer`。
 
-```text
-YOLO/RealSense/VLM -> dynamic-waste-kg -> LangGraph planner -> ROS2 executor -> dynamic-waste-kg event feedback
-```
+## 职责边界
 
----
+`dynamic-waste-kg` 负责：
 
-## 当前类别体系
+- 长期类别知识。
+- 短期对象记忆。
+- `unknown` 对象记忆入口。
+- 事件日志。
+- YOLO/RealSense/VLM 到图谱的输入适配。
+- Neo4j 导出和可视化。
+- 给 LangGraph 和 ROS2 输出规划状态。
 
-YOLO 和长期知识层默认使用 11 个明确类别：
+`dynamic-waste-kg` 不负责：
 
-```text
-concrete
-brick
-tile
-wood
-gypsum_board
-foam
-metal
-soft_plastic
-hard_plastic
-paperboard
-glass
-```
-
-`unknown` 不是 YOLO 训练类别，而是以下情况触发的系统状态：
-
-- YOLO 置信度极低；
-- VLM 属性与 YOLO 假设冲突；
-- 证据不足；
-- 物体疑似危险或无法可靠归类；
-- 人工复核前不宜进入自动处理。
-
----
+- LangGraph 多智能体编排。
+- ROS2 机械臂控制节点。
+- MoveIt 运动规划实现。
+- 最终 UI。
+- 完整机器人安全系统。
 
 ## 运行测试
 
@@ -94,18 +76,24 @@ cd C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg
 .\.venv\Scripts\python.exe -m unittest discover -s tests
 ```
 
----
+## 训练入口
 
-## 主要模块
+涉及训练时，AI 代理只给出命令和参数建议，不在沙盒里直接启动训练。用户应先确认显存，再在本机运行：
 
-- `wastekg.models`: 图谱数据模型；
-- `wastekg.knowledge_base`: 11 类长期知识种子；
-- `wastekg.taxonomy`: 类别常量、别名映射和 unknown 边界；
-- `wastekg.perception_pipeline`: YOLO/VLM 记录到图谱的转换；
-- `wastekg.llm_reviewer`: OpenAI-compatible VLM 复核器；
-- `wastekg.store`: 内存图谱与增量更新；
-- `wastekg.interfaces`: LangGraph/ROS2 状态接口；
-- `wastekg.rgbd_geometry`: RealSense RGB-D 几何补全；
-- `wastekg.exporters`: JSON、Mermaid、Neo4j 导出；
-- `paper_experiments/`: 小论文 E0-E4 补充实验。
+```powershell
+.\.venv\Scripts\python.exe scripts\yolo\train_yolo_seg.py `
+  --data datasets\waste12_yolo\data.yaml `
+  --model yolo11n-seg.pt `
+  --epochs 50 `
+  --imgsz 640 `
+  --batch 4 `
+  --device 0 `
+  --name yolo11n_seg_next
+```
 
+## 产物边界
+
+- `datasets/`：本地数据集，不进入 Git；`datasets/docs/` 例外，允许提交数据说明文档。
+- `outputs/yolo_runs/`：YOLO/Ultralytics 训练、验证或预测产物，不进入 Git。
+- `artifacts/`：临时导出、图像样本和分析产物，不进入 Git。
+- `paper_experiments/`：小论文实验协议、脚本、结果索引和补充文档。

@@ -1,3 +1,5 @@
+"""运行 run e4 image sequence 小论文实验入口。"""
+
 from __future__ import annotations
 
 import argparse
@@ -13,15 +15,15 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from wastekg.paper_e4_image_sequence import (  # noqa: E402
+from wastekg.paper.e4_image_sequence import (  # noqa: E402
     SequenceDetection,
     build_image_sequence_events,
     detections_from_yolo_records,
     match_image_sequence_detections,
     summarize_image_sequence,
 )
-from wastekg.ultralytics_runtime import prepare_ultralytics_runtime  # noqa: E402
-from wastekg.yolo_image_pipeline import records_from_yolo_result  # noqa: E402
+from wastekg.yolo.ultralytics_runtime import prepare_ultralytics_runtime  # noqa: E402
+from wastekg.yolo.image_pipeline import records_from_yolo_result  # noqa: E402
 
 
 def _build_parser() -> argparse.ArgumentParser:

@@ -1,9 +1,11 @@
+"""验证 test ultralytics runtime 相关功能。"""
+
 import os
 import tempfile
 import unittest
 from pathlib import Path
 
-from wastekg.ultralytics_runtime import prepare_ultralytics_runtime
+from wastekg.yolo.ultralytics_runtime import prepare_ultralytics_runtime
 
 
 class UltralyticsRuntimeTests(unittest.TestCase):

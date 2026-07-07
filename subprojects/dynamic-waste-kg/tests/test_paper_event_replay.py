@@ -1,8 +1,10 @@
+"""验证 test paper event replay 相关功能。"""
+
 from __future__ import annotations
 
 import unittest
 
-from wastekg.paper_event_replay import (
+from wastekg.paper.event_replay import (
     REQUIRED_SCENARIOS,
     evaluate_event_replay_cases,
     generate_default_replay_cases,

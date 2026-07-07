@@ -1,3 +1,5 @@
+"""验证 test dataset freeze 相关功能。"""
+
 import tempfile
 import unittest
 import subprocess
@@ -6,8 +8,8 @@ from pathlib import Path
 
 from PIL import Image
 
-from wastekg.dataset_audit import audit_dataset
-from wastekg.dataset_freeze import freeze_visual_dataset
+from wastekg.data.audit import audit_dataset
+from wastekg.data.freeze import freeze_visual_dataset
 
 
 class DatasetFreezeTests(unittest.TestCase):
@@ -36,7 +38,7 @@ class DatasetFreezeTests(unittest.TestCase):
             completed = subprocess.run(
                 [
                     sys.executable,
-                    "scripts/freeze_visual_dataset.py",
+                    "scripts/data/freeze_visual_dataset.py",
                     "--source",
                     str(source),
                     "--out",
@@ -60,7 +62,7 @@ class DatasetFreezeTests(unittest.TestCase):
     def _write_source_dataset(root: Path) -> None:
         (root / "data.yaml").parent.mkdir(parents=True, exist_ok=True)
         (root / "data.yaml").write_text(
-            f"path: {root.as_posix()}\ntrain: images/train\nval: images/val\ntest: images/test\nnames:\n  0: concrete\n  1: gypsum_board\n  2: asbestos_suspect\n",
+            f"path: {root.as_posix()}\ntrain: images/train\nval: images/val\ntest: images/test\nnames:\n  0: concrete\n  1: gypsum_board\n  2: glass\n",
             encoding="utf-8",
         )
         for index, split in enumerate(("train", "val", "test")):

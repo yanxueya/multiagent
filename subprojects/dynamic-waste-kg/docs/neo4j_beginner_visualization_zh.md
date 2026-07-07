@@ -60,13 +60,13 @@ Password: wastekg123456
 导出演示图谱：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\export_demo_neo4j.py --out artifacts\demo_graph
+.\.venv\Scripts\python.exe scripts\graph\export_demo_neo4j.py --out artifacts\demo_graph
 ```
 
 或者导出单图识别后的图谱：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\predict_image_to_graph.py --image "C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\datasets\waste12_yolo\images\val\cdw2026_2022_0345.jpg" --weights "C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\runs\segment\runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt" --out artifacts\single_image_graph_demo --conf 0.25 --imgsz 640 --device 0
+.\.venv\Scripts\python.exe scripts\graph\predict_image_to_graph.py --image "C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\datasets\waste12_yolo\images\val\cdw2026_2022_0345.jpg" --weights "C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt" --out artifacts\single_image_graph_demo --conf 0.25 --imgsz 640 --device 0
 ```
 
 导出的 Neo4j 文件位置：
@@ -89,13 +89,13 @@ docker exec dynamic-waste-neo4j cypher-shell -u neo4j -p wastekg123456 "MATCH (n
 导入演示图谱：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\import_neo4j_cypher.py --cypher artifacts\demo_graph\neo4j_import.cypher --uri bolt://localhost:7687 --user neo4j --password wastekg123456
+.\.venv\Scripts\python.exe scripts\graph\import_neo4j_cypher.py --cypher artifacts\demo_graph\neo4j_import.cypher --uri bolt://localhost:7687 --user neo4j --password wastekg123456
 ```
 
 如果你想导入单张图片识别后的图谱，用：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\import_neo4j_cypher.py --cypher artifacts\single_image_graph_demo\neo4j_import.cypher --uri bolt://localhost:7687 --user neo4j --password wastekg123456
+.\.venv\Scripts\python.exe scripts\graph\import_neo4j_cypher.py --cypher artifacts\single_image_graph_demo\neo4j_import.cypher --uri bolt://localhost:7687 --user neo4j --password wastekg123456
 ```
 
 ## 5. 在 Neo4j Browser 中查看

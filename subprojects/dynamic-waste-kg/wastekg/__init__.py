@@ -1,4 +1,12 @@
-from .models import (
+"""汇总动态建筑废弃物知识图谱包的公共 API。"""
+
+from .core import (
+    CANONICAL_CATEGORY_ALIASES,
+    DEFAULT_CATEGORY_SPECS,
+    KNOWN_VISUAL_CLASSES,
+    PAPER_VISUAL_CLASSES,
+    UNKNOWN_CATEGORY,
+    WASTE12_CLASSES,
     CategorySpec,
     DetectedObject,
     DetectedRelation,
@@ -6,7 +14,10 @@ from .models import (
     ObjectInstance,
     Observation,
     RelationEdge,
+    canonicalize_category_name,
+    seed_default_categories,
 )
+from .graph import KnowledgeGraph, build_planning_context, graph_events_to_jsonl, graph_to_json_snapshot, graph_to_mermaid, graph_to_neo4j_cypher
 from .interfaces import (
     ExecutionFeedback,
     PlannerRequest,
@@ -19,57 +30,54 @@ from .interfaces import (
     build_ros2_action_command,
     vision_packet_to_observation,
 )
-from .perception_pipeline import (
+from .llm import DeepSeekReviewer, LLMReviewerConfig, OpenAICompatibleReviewer
+from .perception import (
     LightweightReviewer,
     PerceptionPolicy,
     ReviewResult,
     apply_perception_records_to_graph,
     build_records_with_optional_review,
+    build_vision_packet_from_records,
+    relation_hint_from_record,
+    vision_detection_from_record,
 )
-from .deepseek_reviewer import DeepSeekReviewer
-from .exporters import graph_events_to_jsonl, graph_to_json_snapshot, graph_to_mermaid, graph_to_neo4j_cypher
-from .knowledge_base import DEFAULT_CATEGORY_SPECS, seed_default_categories
-from .llm_reviewer import LLMReviewerConfig, OpenAICompatibleReviewer
-from .query import build_planning_context
-from .rgbd_geometry import CameraIntrinsics, deproject_pixel_to_point, enrich_record_with_rgbd, enrich_records_with_rgbd
-from .taxonomy import CANONICAL_CATEGORY_ALIASES, KNOWN_VISUAL_CLASSES, PAPER_VISUAL_CLASSES, UNKNOWN_CATEGORY, WASTE12_CLASSES, canonicalize_category_name
-from .vision_bridge import build_vision_packet_from_records, relation_hint_from_record, vision_detection_from_record
-from .store import KnowledgeGraph
+from .rgbd import CameraIntrinsics, deproject_pixel_to_point, enrich_record_with_rgbd, enrich_records_with_rgbd
 
 __all__ = [
-    "CategorySpec",
-    "CameraIntrinsics",
     "CANONICAL_CATEGORY_ALIASES",
     "DEFAULT_CATEGORY_SPECS",
+    "KNOWN_VISUAL_CLASSES",
+    "PAPER_VISUAL_CLASSES",
+    "UNKNOWN_CATEGORY",
+    "WASTE12_CLASSES",
+    "CameraIntrinsics",
+    "CategorySpec",
+    "DeepSeekReviewer",
     "DetectedObject",
     "DetectedRelation",
-    "DeepSeekReviewer",
     "ExecutionFeedback",
     "GraphEvent",
     "KnowledgeGraph",
-    "KNOWN_VISUAL_CLASSES",
     "LLMReviewerConfig",
+    "LightweightReviewer",
     "ObjectInstance",
-    "OpenAICompatibleReviewer",
     "Observation",
+    "OpenAICompatibleReviewer",
+    "PerceptionPolicy",
     "PlannerRequest",
     "RelationEdge",
+    "ReviewResult",
     "Ros2ActionCommand",
     "VisionDetection",
     "VisionPacket",
     "VisionRelationHint",
-    "WASTE12_CLASSES",
-    "LightweightReviewer",
-    "PerceptionPolicy",
-    "PAPER_VISUAL_CLASSES",
-    "UNKNOWN_CATEGORY",
-    "ReviewResult",
     "apply_execution_feedback",
     "apply_perception_records_to_graph",
     "build_langgraph_state",
+    "build_planning_context",
     "build_records_with_optional_review",
     "build_ros2_action_command",
-    "build_planning_context",
+    "build_vision_packet_from_records",
     "canonicalize_category_name",
     "deproject_pixel_to_point",
     "enrich_record_with_rgbd",
@@ -78,9 +86,8 @@ __all__ = [
     "graph_to_json_snapshot",
     "graph_to_mermaid",
     "graph_to_neo4j_cypher",
-    "build_vision_packet_from_records",
     "relation_hint_from_record",
-    "vision_detection_from_record",
     "seed_default_categories",
+    "vision_detection_from_record",
     "vision_packet_to_observation",
 ]

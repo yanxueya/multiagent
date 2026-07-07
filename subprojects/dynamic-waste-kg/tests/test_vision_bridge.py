@@ -1,7 +1,9 @@
+"""验证 test vision bridge 相关功能。"""
+
 import unittest
 
 from wastekg import build_vision_packet_from_records, seed_default_categories, vision_packet_to_observation
-from wastekg.store import KnowledgeGraph
+from wastekg.graph.store import KnowledgeGraph
 
 
 class VisionBridgeTests(unittest.TestCase):

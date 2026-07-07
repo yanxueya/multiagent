@@ -1,3 +1,5 @@
+"""验证 test dataset grouping 相关功能。"""
+
 import shutil
 import subprocess
 import sys
@@ -7,7 +9,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-from wastekg.dataset_grouping import build_grouped_dataset
+from wastekg.data.grouping import build_grouped_dataset
 
 
 class DatasetGroupingTests(unittest.TestCase):
@@ -63,7 +65,7 @@ class DatasetGroupingTests(unittest.TestCase):
             project_root = Path(__file__).resolve().parents[1]
 
             completed = subprocess.run(
-                [sys.executable, "scripts/build_grouped_dataset.py", "--source", str(source), "--out", str(target)],
+                [sys.executable, "scripts/data/build_grouped_dataset.py", "--source", str(source), "--out", str(target)],
                 cwd=project_root,
                 check=False,
                 capture_output=True,

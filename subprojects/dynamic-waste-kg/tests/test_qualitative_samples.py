@@ -1,3 +1,5 @@
+"""验证 test qualitative samples 相关功能。"""
+
 import tempfile
 import unittest
 from pathlib import Path
@@ -6,7 +8,7 @@ import sys
 
 from PIL import Image
 
-from wastekg.qualitative_samples import render_ground_truth_overlay, select_sparse_examples
+from wastekg.paper.qualitative_samples import render_ground_truth_overlay, select_sparse_examples
 
 
 class QualitativeSampleTests(unittest.TestCase):
@@ -14,7 +16,7 @@ class QualitativeSampleTests(unittest.TestCase):
         project_root = Path(__file__).resolve().parents[1]
 
         completed = subprocess.run(
-            [sys.executable, "scripts/export_qualitative_samples.py", "--help"],
+            [sys.executable, "scripts/paper/export_qualitative_samples.py", "--help"],
             cwd=project_root,
             check=False,
             capture_output=True,

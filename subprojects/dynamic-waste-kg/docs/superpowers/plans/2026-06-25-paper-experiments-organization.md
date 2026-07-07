@@ -21,8 +21,8 @@
 - Create `paper_experiments/results/README.md`: result index for manuscript writing.
 - Create `paper_experiments/scripts/run_e3_policy_routing.py`: wrapper command that writes E3 results to `artifacts/paper/e3_policy_routing`.
 - Create `paper_experiments/scripts/run_e4_event_replay.py`: wrapper command that writes E4 results to `artifacts/paper/e4_event_replay`.
-- Create `wastekg/paper_policy.py`: reusable, testable policy-routing evaluator.
-- Create `wastekg/paper_event_replay.py`: reusable, testable controlled event replay evaluator.
+- Create `wastekg/paper/policy.py`: reusable, testable policy-routing evaluator.
+- Create `wastekg/paper/event_replay.py`: reusable, testable controlled event replay evaluator.
 - Create `tests/test_paper_policy.py`: TDD tests for routing and metric behavior.
 - Create `tests/test_paper_event_replay.py`: TDD tests for event replay and metric behavior.
 - Modify `docs/journal_manuscript_draft_zh.md`: add a concise, honest "current experimental evidence" section.
@@ -31,7 +31,7 @@
 ## Task 1: E3 Policy Routing Evaluator
 
 **Files:**
-- Create: `wastekg/paper_policy.py`
+- Create: `wastekg/paper/policy.py`
 - Create: `tests/test_paper_policy.py`
 - Create: `paper_experiments/scripts/run_e3_policy_routing.py`
 - Create: `paper_experiments/protocols/e3_policy_routing.md`
@@ -47,7 +47,7 @@ def test_policy_routes_human_only_as_review_required():
 
 Run: `.\.venv\Scripts\python.exe -m unittest tests.test_paper_policy -v`
 
-Expected: FAIL because `wastekg.paper_policy` does not exist.
+Expected: FAIL because `wastekg.paper.policy` does not exist.
 
 - [ ] **Step 3: Implement minimal routing**
 
@@ -83,7 +83,7 @@ Run:
 ## Task 2: E4 Controlled Event Replay Evaluator
 
 **Files:**
-- Create: `wastekg/paper_event_replay.py`
+- Create: `wastekg/paper/event_replay.py`
 - Create: `tests/test_paper_event_replay.py`
 - Create: `paper_experiments/scripts/run_e4_event_replay.py`
 - Create: `paper_experiments/protocols/e4_event_replay.md`
@@ -99,7 +99,7 @@ def test_event_replay_records_versions_and_events():
 
 Run: `.\.venv\Scripts\python.exe -m unittest tests.test_paper_event_replay -v`
 
-Expected: FAIL because `wastekg.paper_event_replay` does not exist.
+Expected: FAIL because `wastekg.paper.event_replay` does not exist.
 
 - [ ] **Step 3: Implement minimal replay cases**
 

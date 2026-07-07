@@ -1,6 +1,8 @@
+"""验证 test rgbd geometry 相关功能。"""
+
 import unittest
 
-from wastekg.rgbd_geometry import (
+from wastekg.rgbd.geometry import (
     CameraIntrinsics,
     deproject_pixel_to_point,
     enrich_record_with_rgbd,

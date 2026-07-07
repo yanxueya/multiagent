@@ -1,3 +1,5 @@
+"""运行 run e4 event replay 小论文实验入口。"""
+
 from __future__ import annotations
 
 import csv
@@ -9,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from wastekg.paper_event_replay import evaluate_event_replay_cases, generate_default_replay_cases
+from wastekg.paper.event_replay import evaluate_event_replay_cases, generate_default_replay_cases
 
 
 def main() -> int:

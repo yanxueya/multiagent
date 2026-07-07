@@ -1,10 +1,12 @@
+"""验证 test paper e2 batch 相关功能。"""
+
 from __future__ import annotations
 
 import tempfile
 import unittest
 from pathlib import Path
 
-from wastekg.paper_e2_batch import select_image_paths, summarize_review_rows
+from wastekg.paper.e2_batch import select_image_paths, summarize_review_rows
 
 
 class PaperE2BatchTests(unittest.TestCase):

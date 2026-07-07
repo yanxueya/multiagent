@@ -1,6 +1,8 @@
+"""验证 test yolo image pipeline 相关功能。"""
+
 import unittest
 
-from wastekg.yolo_image_pipeline import records_from_yolo_result
+from wastekg.yolo.image_pipeline import records_from_yolo_result
 
 
 class FakeVector:

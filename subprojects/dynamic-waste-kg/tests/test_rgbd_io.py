@@ -1,3 +1,5 @@
+"""验证 test rgbd io 相关功能。"""
+
 import json
 import tempfile
 import unittest
@@ -5,7 +7,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from wastekg.rgbd_io import load_depth_image, load_intrinsics
+from wastekg.rgbd.io import load_depth_image, load_intrinsics
 
 
 class RgbdIoTests(unittest.TestCase):

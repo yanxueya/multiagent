@@ -18,19 +18,19 @@
 
 建议你先看这几个文件：
 
-- `wastekg/models.py`：定义数据结构
-- `wastekg/store.py`：保存和更新图谱
-- `wastekg/knowledge_base.py`：给长期知识层提供默认种子
-- `wastekg/interfaces.py`：YOLO+大模型入口、LangGraph/ROS2 出口
-- `wastekg/query.py`：给后续智能体生成规划上下文
-- `wastekg/cli.py`：生成一个演示场景
+- `wastekg/core/models.py`：定义数据结构
+- `wastekg/graph/store.py`：保存和更新图谱
+- `wastekg/core/knowledge_base.py`：给长期知识层提供默认种子
+- `wastekg/interfaces/contracts.py`：YOLO+大模型入口、LangGraph/ROS2 出口
+- `wastekg/graph/query.py`：给后续智能体生成规划上下文
+- `wastekg/graph/cli.py`：生成一个演示场景
 
 ## 3. 一步一步使用
 
 ### 第一步：创建图谱
 
 ```python
-from wastekg.store import KnowledgeGraph
+from wastekg.graph.store import KnowledgeGraph
 
 graph = KnowledgeGraph()
 ```
@@ -40,7 +40,7 @@ graph = KnowledgeGraph()
 ### 第二步：加入长期知识
 
 ```python
-from wastekg.models import CategorySpec
+from wastekg.core.models import CategorySpec
 
 graph.register_category(
     CategorySpec(
@@ -59,7 +59,7 @@ graph.register_category(
 ### 第三步：加入第一次观测
 
 ```python
-from wastekg.models import DetectedObject, Observation
+from wastekg.core.models import DetectedObject, Observation
 
 obs1 = Observation(
     frame_id="frame_001",
@@ -147,7 +147,7 @@ graph.apply_observation(obs3)
 ### 第七步：查询规划上下文
 
 ```python
-from wastekg.query import build_planning_context
+from wastekg.graph.query import build_planning_context
 
 context = build_planning_context(graph)
 print(context["candidates"])
@@ -322,6 +322,6 @@ print(action)
 
 ```bash
 python -m unittest discover -s tests
-python -m wastekg.cli
-python -m wastekg.cli --json
+python -m wastekg.graph.cli
+python -m wastekg.graph.cli --json
 ```

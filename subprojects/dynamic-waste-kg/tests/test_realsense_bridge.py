@@ -1,9 +1,11 @@
+"""验证 test realsense bridge 相关功能。"""
+
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
-from wastekg.realsense_bridge import RealSenseCaptureConfig, write_capture_metadata
+from wastekg.rgbd.realsense_bridge import RealSenseCaptureConfig, write_capture_metadata
 
 
 class RealSenseBridgeTests(unittest.TestCase):

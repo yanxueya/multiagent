@@ -1,7 +1,9 @@
+"""验证 test cli 相关功能。"""
+
 import unittest
 
-from wastekg.cli import build_demo_graph
-from wastekg.query import build_planning_context
+from wastekg.graph.cli import build_demo_graph
+from wastekg.graph.query import build_planning_context
 
 
 class CLITests(unittest.TestCase):

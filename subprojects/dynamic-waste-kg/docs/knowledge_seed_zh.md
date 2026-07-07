@@ -1,6 +1,6 @@
 # 长期知识层种子说明
 
-本文档说明当前知识图谱长期知识层的稳定版本。它必须与代码中的 `wastekg/knowledge_base.py` 保持一致，是后续 YOLO、VLM 属性一致性校验、LangGraph 多智能体规划和 ROS2 执行约束共同使用的基础。
+本文档说明当前知识图谱长期知识层的稳定版本。它必须与代码中的 `wastekg/core/knowledge_base.py` 保持一致，是后续 YOLO、VLM 属性一致性校验、LangGraph 多智能体规划和 ROS2 执行约束共同使用的基础。
 
 ---
 

@@ -1,3 +1,5 @@
+"""运行 run e3 policy routing 小论文实验入口。"""
+
 from __future__ import annotations
 
 import csv
@@ -9,8 +11,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from wastekg.knowledge_base import DEFAULT_CATEGORY_SPECS
-from wastekg.paper_policy import PolicyCase, evaluate_policy_cases
+from wastekg.core.knowledge_base import DEFAULT_CATEGORY_SPECS
+from wastekg.paper.policy import PolicyCase, evaluate_policy_cases
 
 
 def main() -> int:
@@ -48,8 +50,8 @@ def _default_cases() -> list[PolicyCase]:
         ("foam", "foam", 0.79, "uncertain"),
         ("gypsum_board", "gypsum_board", 0.89, "confirmed"),
         ("glass", "glass", 0.72, "uncertain"),
-        ("asbestos_suspect", "asbestos_suspect", 0.90, "confirmed"),
-        ("asbestos_suspect", "gypsum_board", 0.86, "confirmed"),
+        ("unknown", "unknown", 0.90, "human_review_required"),
+        ("unknown", "gypsum_board", 0.86, "human_review_required"),
         ("glass", "paperboard", 0.91, "confirmed"),
         ("metal", "hard_plastic", 0.84, "review_error"),
     ]

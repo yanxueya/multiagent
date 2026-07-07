@@ -63,7 +63,7 @@ Expected: all geometry tests pass.
 
 **Files:**
 - Create: `wastekg/realsense_bridge.py`
-- Create: `scripts/capture_realsense_frame.py`
+- Create: `scripts/rgbd/capture_realsense_frame.py`
 
 - [x] **Step 1: Implement optional import boundary**
 
@@ -82,27 +82,27 @@ capture_meta.json
 
 - [x] **Step 3: Provide a beginner script**
 
-`scripts/capture_realsense_frame.py` should expose:
+`scripts/rgbd/capture_realsense_frame.py` should expose:
 
 ```powershell
-python scripts\capture_realsense_frame.py --out artifacts\captures\frame_001
+python scripts\rgbd\capture_realsense_frame.py --out artifacts\captures\frame_001
 ```
 
 ### Task 4: RGB-D Image to Graph Script
 
 **Files:**
-- Create: `scripts/predict_rgbd_to_graph.py`
+- Create: `scripts/rgbd/predict_rgbd_to_graph.py`
 
 - [x] **Step 1: Load color image, aligned depth image, and intrinsics**
 
 The script should accept:
 
 ```powershell
-python scripts\predict_rgbd_to_graph.py `
+python scripts\rgbd\predict_rgbd_to_graph.py `
   --image artifacts\captures\frame_001\color.png `
   --depth artifacts\captures\frame_001\aligned_depth.png `
   --intrinsics artifacts\captures\frame_001\camera_intrinsics.json `
-  --weights runs\segment\runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt `
+  --weights outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt `
   --out artifacts\rgbd_graph_demo `
   --conf 0.5 `
   --device 0 `

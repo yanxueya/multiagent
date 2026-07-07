@@ -79,7 +79,7 @@ LLM_BASE_URL=https://api.siliconflow.cn/v1
 
 ```powershell
 cd C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg
-.\.venv\Scripts\python.exe scripts\check_llm_config.py
+.\.venv\Scripts\python.exe scripts\llm\check_llm_config.py
 ```
 
 它不会请求 API，也不会消耗 token，只会显示脱敏后的配置。
@@ -99,7 +99,7 @@ api_key: sk-...xxxx
 确认配置无误后，再运行：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\check_llm_config.py --live
+.\.venv\Scripts\python.exe scripts\llm\check_llm_config.py --live
 ```
 
 `--live` 会真实请求硅基流动，会消耗少量 token。
@@ -111,9 +111,9 @@ api_key: sk-...xxxx
 建议先限制为 5 个目标，避免浪费 token：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\predict_image_to_graph.py `
+.\.venv\Scripts\python.exe scripts\graph\predict_image_to_graph.py `
   --image datasets\waste12_yolo\images\val\instseg_mix07_rgb_0038_png_jpg.rf.f85422203eb2cdf1f58a20d17d16fc25.jpg `
-  --weights runs\segment\runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt `
+  --weights outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt `
   --out artifacts\single_image_llm_demo `
   --conf 0.5 `
   --device 0 `

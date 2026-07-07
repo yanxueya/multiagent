@@ -1,3 +1,5 @@
+"""验证 test knowledge base 相关功能。"""
+
 import unittest
 
 from wastekg import DEFAULT_CATEGORY_SPECS, KnowledgeGraph, seed_default_categories

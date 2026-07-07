@@ -1,9 +1,11 @@
+"""验证 test deepseek reviewer 相关功能。"""
+
 import json
 import os
 import unittest
 from unittest.mock import patch
 
-from wastekg.deepseek_reviewer import DeepSeekReviewer
+from wastekg.llm.deepseek_reviewer import DeepSeekReviewer
 
 
 class FakeHTTPResponse:
