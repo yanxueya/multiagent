@@ -28,3 +28,12 @@ subprojects/dynamic-waste-kg/*.pt
 subprojects/dynamic-waste-kg/wastekg/local_llm_config.py
 .env
 *.env
+subprojects/dynamic-waste-agent/.venv/
+
+*.egg-info/
+
+
+node_modules/
+subprojects/dynamic-waste-ui/node_modules/
+subprojects/dynamic-waste-ui/.npm-cache/
+*.tsbuildinfo

@@ -6,18 +6,18 @@
 
 `multiagent` 是动态建筑废弃物感知、知识图谱、多智能体决策和后续 ROS2 机械臂执行的研究工作区。
 
-当前已实现核心：
+当前已实现：
 
 ```text
 subprojects/dynamic-waste-kg
+subprojects/dynamic-waste-agent
+subprojects/dynamic-waste-ui
 ```
 
-当前占位子项目：
+当前占位或待真实接入子项目：
 
 ```text
-subprojects/dynamic-waste-agent
 subprojects/dynamic-waste-ros2
-subprojects/dynamic-waste-ui
 subprojects/dynamic-waste-sim
 ```
 
@@ -75,10 +75,10 @@ multiagent/
   .gitignore
   subprojects/
     README.md
-    dynamic-waste-kg/        # 已实现：知识图谱、世界模型、数据处理、感知流水线、论文实验
-    dynamic-waste-agent/     # 占位：LangChain/LangGraph 多智能体编排层
+    dynamic-waste-kg/        # 已实现：知识图谱、数据处理、感知流水线、论文实验
+    dynamic-waste-agent/     # 已实现：LangGraph 4-agent 编排与确定性门控
     dynamic-waste-ros2/      # 占位：ROS2 工作区与机器人执行桥接层
-    dynamic-waste-ui/        # 占位：人工复核、监控和可视化界面
+    dynamic-waste-ui/        # 已实现原型：人工复核、监控和可视化界面
     dynamic-waste-sim/       # 占位：仿真、数字孪生、离线回放
 ```
 
@@ -113,9 +113,11 @@ subprojects/dynamic-waste-kg/
 
 ## 4. 职责边界
 
-`dynamic-waste-kg` 负责知识图谱与世界模型：长期类别知识、短期对象记忆、`unknown` 复核入口、事件日志、YOLO/VLM/RealSense 输入适配、RGB-D 几何辅助、Neo4j 导出和面向多智能体/ROS2 的结构化接口。
+`dynamic-waste-kg` 负责知识图谱状态层：长期类别知识、短期对象记忆、`unknown` 复核入口、事件日志、YOLO/VLM/RealSense 输入适配、RGB-D 几何辅助、Neo4j 导出和面向多智能体/ROS2 的结构化接口。
 
-`dynamic-waste-agent` 负责未来 5 智能体编排：感知、知识、风险、规划、执行。
+`dynamic-waste-agent` 负责 4 个真正智能体编排：总体规划 `supervisor_agent`、感知组织 `perception_agent`、行动规划 `action_planning_agent`、执行封装 `execution_agent`。知识图谱、风险门控、人工控制门控和 ROS2 bridge 都是被调用的系统组件，不是 agent。
+
+决策边界必须保持清晰：知识图谱 `graph_state` 只回答“当前对象是什么状态、现在能不能做”；`action_planning_agent` 先按可行性过滤，再根据任务目标、检测证据、处理权限和尝试次数动态计算 `priority_tier` 与 `dynamic_priority_score`，决定“先做什么、后做什么、失败后怎么办”。优先级、评分、计划顺序和失败策略不得写成 KG 属性。
 
 `dynamic-waste-ros2` 负责 ROS2 消息、桥接、执行器和 bringup。ROS2 接收结构化命令，不接收 LLM 自由文本。
 
@@ -127,8 +129,10 @@ subprojects/dynamic-waste-kg/
 
 ```text
 YOLO / RealSense / VLM
-  -> dynamic-waste-kg
-  -> dynamic-waste-agent
+  -> perception_agent
+  -> dynamic-waste-kg / KG graph_state
+  -> dynamic-waste-agent supervisor_agent + risk_gate + action_planning_agent
+  -> human_control_gate 或 execution_agent
   -> dynamic-waste-ros2
   -> 机械臂或仿真
   -> 执行反馈

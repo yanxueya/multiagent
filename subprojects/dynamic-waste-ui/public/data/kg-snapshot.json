@@ -1,0 +1,790 @@
+{
+  "categories": {
+    "concrete": {
+      "category_name": "concrete",
+      "risk_level": "medium",
+      "fragility": "low",
+      "graspability_prior": "low",
+      "vlm_review_policy": "threshold_based",
+      "default_handling_policy": "human_confirmation_required",
+      "visual_prototype": {
+        "dominant_color": [
+          "gray",
+          "dark_gray"
+        ],
+        "transparency": [
+          "opaque"
+        ],
+        "glossiness": [
+          "low"
+        ],
+        "surface_texture": [
+          "rough",
+          "granular"
+        ],
+        "edge_fracture": [
+          "irregular_broken"
+        ],
+        "shape_form": [
+          "irregular_chunk",
+          "block_like"
+        ]
+      }
+    },
+    "brick": {
+      "category_name": "brick",
+      "risk_level": "medium",
+      "fragility": "low",
+      "graspability_prior": "medium",
+      "vlm_review_policy": "threshold_based",
+      "default_handling_policy": "auto_allowed",
+      "visual_prototype": {
+        "dominant_color": [
+          "red_brown",
+          "brown"
+        ],
+        "transparency": [
+          "opaque"
+        ],
+        "glossiness": [
+          "low"
+        ],
+        "surface_texture": [
+          "rough",
+          "porous"
+        ],
+        "edge_fracture": [
+          "irregular_broken",
+          "blunt"
+        ],
+        "shape_form": [
+          "block_like",
+          "fragment"
+        ]
+      }
+    },
+    "tile": {
+      "category_name": "tile",
+      "risk_level": "medium",
+      "fragility": "high",
+      "graspability_prior": "medium",
+      "vlm_review_policy": "threshold_based",
+      "default_handling_policy": "human_confirmation_required",
+      "visual_prototype": {
+        "dominant_color": [
+          "white",
+          "gray",
+          "mixed"
+        ],
+        "transparency": [
+          "opaque"
+        ],
+        "glossiness": [
+          "medium",
+          "high"
+        ],
+        "surface_texture": [
+          "smooth"
+        ],
+        "edge_fracture": [
+          "sharp",
+          "flat_broken"
+        ],
+        "shape_form": [
+          "thin_plate",
+          "fragment"
+        ]
+      }
+    },
+    "wood": {
+      "category_name": "wood",
+      "risk_level": "low",
+      "fragility": "low",
+      "graspability_prior": "medium",
+      "vlm_review_policy": "threshold_based",
+      "default_handling_policy": "auto_allowed",
+      "visual_prototype": {
+        "dominant_color": [
+          "brown",
+          "yellow_brown"
+        ],
+        "transparency": [
+          "opaque"
+        ],
+        "glossiness": [
+          "low"
+        ],
+        "surface_texture": [
+          "wood_grain",
+          "fibrous"
+        ],
+        "edge_fracture": [
+          "torn",
+          "irregular_broken"
+        ],
+        "shape_form": [
+          "sheet_like",
+          "rod_like",
+          "fragment"
+        ]
+      }
+    },
+    "gypsum_board": {
+      "category_name": "gypsum_board",
+      "risk_level": "medium",
+      "fragility": "high",
+      "graspability_prior": "low",
+      "vlm_review_policy": "always",
+      "default_handling_policy": "human_confirmation_required",
+      "visual_prototype": {
+        "dominant_color": [
+          "white",
+          "light_gray"
+        ],
+        "transparency": [
+          "opaque"
+        ],
+        "glossiness": [
+          "low"
+        ],
+        "surface_texture": [
+          "powdery",
+          "layered"
+        ],
+        "edge_fracture": [
+          "flat_broken",
+          "layered_break"
+        ],
+        "shape_form": [
+          "thin_plate",
+          "fragment"
+        ]
+      }
+    },
+    "foam": {
+      "category_name": "foam",
+      "risk_level": "low",
+      "fragility": "low",
+      "graspability_prior": "medium",
+      "vlm_review_policy": "threshold_based",
+      "default_handling_policy": "human_confirmation_required",
+      "visual_prototype": {
+        "dominant_color": [
+          "white",
+          "yellow",
+          "mixed"
+        ],
+        "transparency": [
+          "opaque"
+        ],
+        "glossiness": [
+          "low"
+        ],
+        "surface_texture": [
+          "porous"
+        ],
+        "edge_fracture": [
+          "blunt",
+          "irregular_broken"
+        ],
+        "shape_form": [
+          "block_like",
+          "fragment"
+        ]
+      }
+    },
+    "metal": {
+      "category_name": "metal",
+      "risk_level": "medium",
+      "fragility": "low",
+      "graspability_prior": "medium",
+      "vlm_review_policy": "threshold_based",
+      "default_handling_policy": "human_confirmation_required",
+      "visual_prototype": {
+        "dominant_color": [
+          "silver",
+          "gray",
+          "rust_brown"
+        ],
+        "transparency": [
+          "opaque"
+        ],
+        "glossiness": [
+          "metallic"
+        ],
+        "surface_texture": [
+          "smooth",
+          "rough"
+        ],
+        "edge_fracture": [
+          "sharp",
+          "folded"
+        ],
+        "shape_form": [
+          "sheet_like",
+          "rod_like",
+          "fragment"
+        ]
+      }
+    },
+    "soft_plastic": {
+      "category_name": "soft_plastic",
+      "risk_level": "low",
+      "fragility": "low",
+      "graspability_prior": "medium",
+      "vlm_review_policy": "threshold_based",
+      "default_handling_policy": "human_confirmation_required",
+      "visual_prototype": {
+        "dominant_color": [
+          "mixed"
+        ],
+        "transparency": [
+          "transparent",
+          "translucent",
+          "opaque"
+        ],
+        "glossiness": [
+          "medium",
+          "high"
+        ],
+        "surface_texture": [
+          "wrinkled",
+          "smooth"
+        ],
+        "edge_fracture": [
+          "folded",
+          "torn"
+        ],
+        "shape_form": [
+          "film_like",
+          "sheet_like"
+        ]
+      }
+    },
+    "hard_plastic": {
+      "category_name": "hard_plastic",
+      "risk_level": "low",
+      "fragility": "low",
+      "graspability_prior": "medium",
+      "vlm_review_policy": "threshold_based",
+      "default_handling_policy": "auto_allowed",
+      "visual_prototype": {
+        "dominant_color": [
+          "mixed"
+        ],
+        "transparency": [
+          "transparent",
+          "translucent",
+          "opaque"
+        ],
+        "glossiness": [
+          "medium",
+          "high"
+        ],
+        "surface_texture": [
+          "smooth"
+        ],
+        "edge_fracture": [
+          "blunt",
+          "irregular_broken"
+        ],
+        "shape_form": [
+          "fragment",
+          "sheet_like",
+          "block_like"
+        ]
+      }
+    },
+    "paperboard": {
+      "category_name": "paperboard",
+      "risk_level": "low",
+      "fragility": "medium",
+      "graspability_prior": "medium",
+      "vlm_review_policy": "threshold_based",
+      "default_handling_policy": "auto_allowed",
+      "visual_prototype": {
+        "dominant_color": [
+          "brown",
+          "yellow_brown"
+        ],
+        "transparency": [
+          "opaque"
+        ],
+        "glossiness": [
+          "low"
+        ],
+        "surface_texture": [
+          "layered",
+          "fibrous"
+        ],
+        "edge_fracture": [
+          "torn",
+          "folded"
+        ],
+        "shape_form": [
+          "sheet_like",
+          "fragment"
+        ]
+      }
+    },
+    "glass": {
+      "category_name": "glass",
+      "risk_level": "high",
+      "fragility": "high",
+      "graspability_prior": "low",
+      "vlm_review_policy": "always",
+      "default_handling_policy": "human_confirmation_required",
+      "visual_prototype": {
+        "dominant_color": [
+          "clear",
+          "light_green",
+          "light_blue"
+        ],
+        "transparency": [
+          "transparent",
+          "translucent"
+        ],
+        "glossiness": [
+          "high"
+        ],
+        "surface_texture": [
+          "smooth"
+        ],
+        "edge_fracture": [
+          "sharp"
+        ],
+        "shape_form": [
+          "thin_plate",
+          "fragment"
+        ]
+      }
+    }
+  },
+  "scenes": {
+    "demo_frame_001": {
+      "scene_id": "demo_frame_001",
+      "captured_at": "2026-07-10T18:04:25.780038+00:00",
+      "rgb_ref": "demo/rgb_001.png",
+      "depth_ref": "demo/depth_001.png"
+    }
+  },
+  "instances": {
+    "brick_01": {
+      "instance_id": "brick_01",
+      "yolo_confidence": 0.96,
+      "recognition_status": "accepted",
+      "bbox_2d": null,
+      "mask_ref": "",
+      "crop_ref": "",
+      "center_xyz_camera": [
+        0.1,
+        0.1,
+        0.0
+      ],
+      "depth_valid_ratio": 0.82,
+      "observed_extent_3d": [
+        0.18,
+        0.1,
+        0.06
+      ],
+      "occlusion_state": "none",
+      "vlm_consistency": "not_checked",
+      "current_handling_policy": "auto_allowed",
+      "task_status": "pending",
+      "attempt_count": 0
+    },
+    "glass_01": {
+      "instance_id": "glass_01",
+      "yolo_confidence": 0.91,
+      "recognition_status": "accepted",
+      "bbox_2d": null,
+      "mask_ref": "",
+      "crop_ref": "",
+      "center_xyz_camera": [
+        0.11,
+        0.11,
+        0.08
+      ],
+      "depth_valid_ratio": 0.68,
+      "observed_extent_3d": [
+        0.12,
+        0.08,
+        0.02
+      ],
+      "occlusion_state": "partial",
+      "vlm_consistency": "not_checked",
+      "current_handling_policy": "human_confirmation_required",
+      "task_status": "pending",
+      "attempt_count": 0
+    },
+    "metal_01": {
+      "instance_id": "metal_01",
+      "yolo_confidence": 0.88,
+      "recognition_status": "accepted",
+      "bbox_2d": null,
+      "mask_ref": "",
+      "crop_ref": "",
+      "center_xyz_camera": [
+        0.3,
+        0.2,
+        0.02
+      ],
+      "depth_valid_ratio": 0.73,
+      "observed_extent_3d": [
+        0.2,
+        0.05,
+        0.04
+      ],
+      "occlusion_state": "none",
+      "vlm_consistency": "not_checked",
+      "current_handling_policy": "human_confirmation_required",
+      "task_status": "pending",
+      "attempt_count": 0
+    },
+    "unknown_01": {
+      "instance_id": "unknown_01",
+      "yolo_confidence": 0.11,
+      "recognition_status": "unknown",
+      "bbox_2d": null,
+      "mask_ref": "",
+      "crop_ref": "",
+      "center_xyz_camera": [
+        0.23,
+        0.18,
+        0.02
+      ],
+      "depth_valid_ratio": 0.51,
+      "observed_extent_3d": [
+        0.09,
+        0.08,
+        0.05
+      ],
+      "occlusion_state": "unknown",
+      "vlm_consistency": "not_checked",
+      "current_handling_policy": "robot_forbidden",
+      "task_status": "pending",
+      "attempt_count": 0
+    }
+  },
+  "unknown_samples": {
+    "unknown_sample_001": {
+      "sample_id": "unknown_sample_001",
+      "crop_ref": "",
+      "mask_ref": "",
+      "yolo_topk": {
+        "foam": 0.11,
+        "soft_plastic": 0.08
+      },
+      "vlm_attributes": {},
+      "review_status": "pending",
+      "human_label": null
+    }
+  },
+  "unknown_clusters": {},
+  "edges": [
+    {
+      "source_id": "demo_frame_001",
+      "relation": "CONTAINS",
+      "target_id": "brick_01"
+    },
+    {
+      "source_id": "brick_01",
+      "relation": "CANDIDATE_OF",
+      "target_id": "brick"
+    },
+    {
+      "source_id": "evt_1b043a5514a1",
+      "relation": "IN_SCENE",
+      "target_id": "demo_frame_001"
+    },
+    {
+      "source_id": "evt_1b043a5514a1",
+      "relation": "DETECTED",
+      "target_id": "brick_01"
+    },
+    {
+      "source_id": "evt_1b043a5514a1",
+      "relation": "PROPOSED",
+      "target_id": "brick"
+    },
+    {
+      "source_id": "brick_01",
+      "relation": "CONFIRMED_AS",
+      "target_id": "brick"
+    },
+    {
+      "source_id": "evt_6bbc72ccec09",
+      "relation": "IN_SCENE",
+      "target_id": "demo_frame_001"
+    },
+    {
+      "source_id": "evt_6bbc72ccec09",
+      "relation": "UPDATES",
+      "target_id": "brick_01"
+    },
+    {
+      "source_id": "demo_frame_001",
+      "relation": "CONTAINS",
+      "target_id": "glass_01"
+    },
+    {
+      "source_id": "glass_01",
+      "relation": "CANDIDATE_OF",
+      "target_id": "glass"
+    },
+    {
+      "source_id": "evt_c87dfc48fae5",
+      "relation": "IN_SCENE",
+      "target_id": "demo_frame_001"
+    },
+    {
+      "source_id": "evt_c87dfc48fae5",
+      "relation": "DETECTED",
+      "target_id": "glass_01"
+    },
+    {
+      "source_id": "evt_c87dfc48fae5",
+      "relation": "PROPOSED",
+      "target_id": "glass"
+    },
+    {
+      "source_id": "glass_01",
+      "relation": "CONFIRMED_AS",
+      "target_id": "glass"
+    },
+    {
+      "source_id": "evt_c80dbd91a29c",
+      "relation": "IN_SCENE",
+      "target_id": "demo_frame_001"
+    },
+    {
+      "source_id": "evt_c80dbd91a29c",
+      "relation": "UPDATES",
+      "target_id": "glass_01"
+    },
+    {
+      "source_id": "demo_frame_001",
+      "relation": "CONTAINS",
+      "target_id": "metal_01"
+    },
+    {
+      "source_id": "metal_01",
+      "relation": "CANDIDATE_OF",
+      "target_id": "metal"
+    },
+    {
+      "source_id": "evt_3ff2e9414df4",
+      "relation": "IN_SCENE",
+      "target_id": "demo_frame_001"
+    },
+    {
+      "source_id": "evt_3ff2e9414df4",
+      "relation": "DETECTED",
+      "target_id": "metal_01"
+    },
+    {
+      "source_id": "evt_3ff2e9414df4",
+      "relation": "PROPOSED",
+      "target_id": "metal"
+    },
+    {
+      "source_id": "metal_01",
+      "relation": "CONFIRMED_AS",
+      "target_id": "metal"
+    },
+    {
+      "source_id": "evt_0c13af64ada4",
+      "relation": "IN_SCENE",
+      "target_id": "demo_frame_001"
+    },
+    {
+      "source_id": "evt_0c13af64ada4",
+      "relation": "UPDATES",
+      "target_id": "metal_01"
+    },
+    {
+      "source_id": "demo_frame_001",
+      "relation": "CONTAINS",
+      "target_id": "unknown_01"
+    },
+    {
+      "source_id": "unknown_01",
+      "relation": "CANDIDATE_OF",
+      "target_id": "foam"
+    },
+    {
+      "source_id": "evt_b4847a1cbfc4",
+      "relation": "IN_SCENE",
+      "target_id": "demo_frame_001"
+    },
+    {
+      "source_id": "evt_b4847a1cbfc4",
+      "relation": "DETECTED",
+      "target_id": "unknown_01"
+    },
+    {
+      "source_id": "evt_b4847a1cbfc4",
+      "relation": "PROPOSED",
+      "target_id": "foam"
+    },
+    {
+      "source_id": "unknown_01",
+      "relation": "RECORDED_AS",
+      "target_id": "unknown_sample_001"
+    },
+    {
+      "source_id": "evt_1f9f53d21c73",
+      "relation": "IN_SCENE",
+      "target_id": "demo_frame_001"
+    },
+    {
+      "source_id": "evt_1f9f53d21c73",
+      "relation": "UPDATES",
+      "target_id": "unknown_01"
+    },
+    {
+      "source_id": "brick_01",
+      "relation": "NEAR",
+      "target_id": "glass_01"
+    },
+    {
+      "source_id": "brick_01",
+      "relation": "NEAR",
+      "target_id": "metal_01"
+    },
+    {
+      "source_id": "brick_01",
+      "relation": "NEAR",
+      "target_id": "unknown_01"
+    },
+    {
+      "source_id": "glass_01",
+      "relation": "NEAR",
+      "target_id": "metal_01"
+    },
+    {
+      "source_id": "glass_01",
+      "relation": "NEAR",
+      "target_id": "unknown_01"
+    },
+    {
+      "source_id": "metal_01",
+      "relation": "NEAR",
+      "target_id": "unknown_01"
+    }
+  ],
+  "events": [
+    {
+      "event_id": "evt_1b043a5514a1",
+      "event_type": "DetectionEvent",
+      "event_time": "2026-07-10T18:04:25.780102+00:00",
+      "event_source": "yolo_detector",
+      "yolo_confidence": 0.96,
+      "bbox_2d": null,
+      "mask_ref": "",
+      "crop_ref": ""
+    },
+    {
+      "event_id": "evt_6bbc72ccec09",
+      "event_type": "DepthUpdateEvent",
+      "event_time": "2026-07-10T18:04:25.780138+00:00",
+      "event_source": "depth_processor",
+      "center_xyz_camera": [
+        0.1,
+        0.1,
+        0.0
+      ],
+      "depth_valid_ratio": 0.82,
+      "observed_extent_3d": [
+        0.18,
+        0.1,
+        0.06
+      ],
+      "occlusion_state": "none"
+    },
+    {
+      "event_id": "evt_c87dfc48fae5",
+      "event_type": "DetectionEvent",
+      "event_time": "2026-07-10T18:04:25.780180+00:00",
+      "event_source": "yolo_detector",
+      "yolo_confidence": 0.91,
+      "bbox_2d": null,
+      "mask_ref": "",
+      "crop_ref": ""
+    },
+    {
+      "event_id": "evt_c80dbd91a29c",
+      "event_type": "DepthUpdateEvent",
+      "event_time": "2026-07-10T18:04:25.780195+00:00",
+      "event_source": "depth_processor",
+      "center_xyz_camera": [
+        0.11,
+        0.11,
+        0.08
+      ],
+      "depth_valid_ratio": 0.68,
+      "observed_extent_3d": [
+        0.12,
+        0.08,
+        0.02
+      ],
+      "occlusion_state": "partial"
+    },
+    {
+      "event_id": "evt_3ff2e9414df4",
+      "event_type": "DetectionEvent",
+      "event_time": "2026-07-10T18:04:25.780220+00:00",
+      "event_source": "yolo_detector",
+      "yolo_confidence": 0.88,
+      "bbox_2d": null,
+      "mask_ref": "",
+      "crop_ref": ""
+    },
+    {
+      "event_id": "evt_0c13af64ada4",
+      "event_type": "DepthUpdateEvent",
+      "event_time": "2026-07-10T18:04:25.780243+00:00",
+      "event_source": "depth_processor",
+      "center_xyz_camera": [
+        0.3,
+        0.2,
+        0.02
+      ],
+      "depth_valid_ratio": 0.73,
+      "observed_extent_3d": [
+        0.2,
+        0.05,
+        0.04
+      ],
+      "occlusion_state": "none"
+    },
+    {
+      "event_id": "evt_b4847a1cbfc4",
+      "event_type": "DetectionEvent",
+      "event_time": "2026-07-10T18:04:25.780267+00:00",
+      "event_source": "yolo_detector",
+      "yolo_confidence": 0.11,
+      "bbox_2d": null,
+      "mask_ref": "",
+      "crop_ref": ""
+    },
+    {
+      "event_id": "evt_1f9f53d21c73",
+      "event_type": "DepthUpdateEvent",
+      "event_time": "2026-07-10T18:04:25.780297+00:00",
+      "event_source": "depth_processor",
+      "center_xyz_camera": [
+        0.23,
+        0.18,
+        0.02
+      ],
+      "depth_valid_ratio": 0.51,
+      "observed_extent_3d": [
+        0.09,
+        0.08,
+        0.05
+      ],
+      "occlusion_state": "unknown"
+    }
+  ]
+}

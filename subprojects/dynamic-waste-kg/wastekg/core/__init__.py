@@ -9,6 +9,9 @@ from .models import (
     ObjectInstance,
     Observation,
     RelationEdge,
+    Scene,
+    UnknownCluster,
+    UnknownSample,
 )
 from .taxonomy import (
     CANONICAL_CATEGORY_ALIASES,
@@ -31,6 +34,9 @@ __all__ = [
     "Observation",
     "PAPER_VISUAL_CLASSES",
     "RelationEdge",
+    "Scene",
+    "UnknownCluster",
+    "UnknownSample",
     "UNKNOWN_CATEGORY",
     "WASTE12_CLASSES",
     "canonicalize_category_name",

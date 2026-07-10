@@ -31,13 +31,13 @@ Ubuntu 22.04 更适合：
 ## 2. 当前已实现的文件
 
 ```text
-wastekg/rgbd_geometry.py
-  根据 mask/bbox + aligned depth + 相机内参计算 center_xyz、bbox_3d、visible_area_ratio、safe_grasp_score。
+wastekg/rgbd/geometry.py
+  根据 mask/bbox + aligned depth + 相机内参计算临时几何结果和抓取候选。
 
-wastekg/rgbd_io.py
+wastekg/rgbd/io.py
   读取 aligned_depth.png 和 camera_intrinsics.json。
 
-wastekg/realsense_bridge.py
+wastekg/rgbd/realsense_bridge.py
   可选 RealSense 采集接口。只有真正采集时才需要 pyrealsense2。
 
 scripts/rgbd/capture_realsense_frame.py
@@ -183,7 +183,7 @@ artifacts/rgbd_graph_frame_001/
   prediction/
 ```
 
-重点检查 `rgbd_records.json`：
+重点检查 `rgbd_records.json` 中的临时几何结果：
 
 ```text
 center_xyz
@@ -193,6 +193,8 @@ occlusion_state
 grasp_candidates
 safe_grasp_score
 ```
+
+其中 `safe_grasp_score` 和 `grasp_candidates` 只供 RGB-D/规划前处理使用，不作为知识图谱节点属性。写入 `ObjectInstance` 的权威字段是 `center_xyz_camera`、`depth_valid_ratio`、`observed_extent_3d` 和 `occlusion_state`。
 
 如果 `center_xyz` 的 Z 值明显不合理，例如全部为 0 或远大于实际距离，说明深度图或内参没有正确接入。
 
@@ -213,21 +215,21 @@ python scripts/graph/import_neo4j_cypher.py \
 然后在 Neo4j Browser 中查看：
 
 ```cypher
-MATCH (i:Instance) RETURN i
+MATCH (i:ObjectInstance) RETURN i
 ```
 
 查看实例与长期类别：
 
 ```cypher
-MATCH p=(i:Instance)-[:OF_CATEGORY]->(c:Category) RETURN p LIMIT 80
+MATCH p=(i:ObjectInstance)-[:CANDIDATE_OF|CONFIRMED_AS]->(c:WasteCategory) RETURN p LIMIT 80
 ```
 
 查看 RGB-D 几何字段：
 
 ```cypher
-MATCH (i:Instance)
-RETURN i.instance_id, i.class_name, i.center_xyz, i.bbox_3d_json, i.visible_area_ratio, i.safe_grasp_score
-ORDER BY i.safe_grasp_score DESC
+MATCH (i:ObjectInstance)
+RETURN i.instance_id, i.center_xyz_camera, i.depth_valid_ratio, i.observed_extent_3d, i.occlusion_state
+ORDER BY i.depth_valid_ratio DESC
 ```
 
 ## 8. 真实抓取前必须验证

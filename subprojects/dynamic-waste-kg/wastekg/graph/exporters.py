@@ -1,26 +1,21 @@
-"""导出知识图谱快照、事件和 Neo4j Cypher。"""
+"""把三层知识图谱导出为 JSON、Mermaid、JSONL 和 Neo4j Cypher。"""
 
 from __future__ import annotations
 
 import json
 import re
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, List, Tuple
 
-from wastekg.core.models import GraphEvent, ObjectInstance, RelationEdge
+from wastekg.core.models import GraphEvent
 from wastekg.graph.store import KnowledgeGraph
-
-
-def _sanitize_neo4j_type(value: str, fallback: str = "RELATED_TO") -> str:
-    cleaned = re.sub(r"[^A-Za-z0-9_]", "_", value.upper()).strip("_")
-    if not cleaned:
-        return fallback
-    if cleaned[0].isdigit():
-        cleaned = f"R_{cleaned}"
-    return cleaned
 
 
 def _json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
+
+def _safe(value: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_]", "_", value)
 
 
 def _neo4j_literal(value: Any) -> str:
@@ -28,158 +23,67 @@ def _neo4j_literal(value: Any) -> str:
         return "null"
     if isinstance(value, bool):
         return "true" if value else "false"
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
-        return repr(value)
-    if isinstance(value, str):
-        # PowerShell 管道传给 docker exec 时容易破坏非 ASCII 字符；
-        # 用 JSON/Cypher 兼容的 unicode 转义保证导入语句稳定。
-        return json.dumps(value, ensure_ascii=True)
-    if isinstance(value, (list, tuple)):
-        return "[" + ", ".join(_neo4j_literal(item) for item in value) + "]"
-    if isinstance(value, dict):
-        inner = ", ".join(f"{_neo4j_key(str(key))}: {_neo4j_literal(item)}" for key, item in value.items())
-        return "{ " + inner + " }"
-    return json.dumps(str(value), ensure_ascii=False)
-
-
-def _neo4j_key(value: str) -> str:
-    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", value):
-        return value
-    return "`" + value.replace("`", "``") + "`"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, (list, dict, tuple)):
+        value = json.dumps(value, ensure_ascii=True, sort_keys=True)
+    return "'" + str(value).replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n") + "'"
 
 
 def _neo4j_map(properties: Dict[str, Any]) -> str:
-    return "{ " + ", ".join(f"{_neo4j_key(key)}: {_neo4j_literal(value)}" for key, value in properties.items()) + " }"
-
-
-def _is_neo4j_scalar(value: Any) -> bool:
-    return value is None or isinstance(value, (str, bool, int, float))
-
-
-def _normalize_neo4j_properties(properties: Dict[str, Any]) -> Dict[str, Any]:
-    normalized: Dict[str, Any] = {}
-    for key, value in properties.items():
-        if _is_neo4j_scalar(value):
-            normalized[key] = value
-        elif isinstance(value, (list, tuple)) and all(_is_neo4j_scalar(item) for item in value):
-            normalized[key] = list(value)
-        else:
-            # Neo4j 节点属性不能直接保存二维列表或字典，复杂几何/候选抓取信息用 JSON 保真存储。
-            normalized[f"{key}_json"] = json.dumps(value, ensure_ascii=False, sort_keys=True)
-    return normalized
-
-
-def _flatten_category_props(spec) -> Dict[str, Any]:
-    return _normalize_neo4j_properties({
-        "name": spec.name,
-        "category": spec.category,
-        "material": spec.material,
-        "risk_level": spec.risk_level,
-        "fragility": spec.fragility,
-        "graspability": spec.graspability,
-        "pollution_level": spec.pollution_level,
-        "recognition_difficulty": spec.recognition_difficulty,
-        "handling_mode": spec.handling_mode,
-        "grasp_difficulty": spec.grasp_difficulty,
-        "needs_llm_review": spec.needs_llm_review,
-        "auto_processable": spec.auto_processable,
-        "recyclability": spec.recyclability,
-        "semantic_tags": list(spec.semantic_tags),
-        "confidence_prior": spec.confidence_prior,
-        "description": spec.description,
-        "source_refs": list(spec.source_refs),
-        "notes": spec.notes,
-    })
-
-
-def _flatten_instance_props(instance: ObjectInstance) -> Dict[str, Any]:
-    props = instance.to_dict()
-    metadata = dict(props.pop("metadata", {}))
-    props["metadata_json"] = json.dumps(metadata, ensure_ascii=False, sort_keys=True)
-    return _normalize_neo4j_properties(props)
-
-
-def _flatten_relation_props(edge: RelationEdge) -> Dict[str, Any]:
-    props = edge.to_dict()
-    metadata = dict(props.pop("metadata", {}))
-    props["metadata_json"] = json.dumps(metadata, ensure_ascii=False, sort_keys=True)
-    return _normalize_neo4j_properties(props)
-
-
-def _flatten_event_props(event: GraphEvent) -> Dict[str, Any]:
-    return {
-        "event_id": event.event_id,
-        "event_type": event.event_type,
-        "subject_id": event.subject_id,
-        "relation": event.relation,
-        "before_state_json": json.dumps(event.before_state, ensure_ascii=False, sort_keys=True),
-        "after_state_json": json.dumps(event.after_state, ensure_ascii=False, sort_keys=True),
-        "source": event.source,
-        "timestamp": event.timestamp.isoformat(),
-        "confidence_delta": event.confidence_delta,
-        "metadata_json": json.dumps(dict(event.metadata), ensure_ascii=False, sort_keys=True),
-    }
+    return "{" + ", ".join(f"{key}: {_neo4j_literal(value)}" for key, value in properties.items()) + "}"
 
 
 def graph_to_json_snapshot(graph: KnowledgeGraph) -> Dict[str, Any]:
-    # 直接导出一个稳定的 JSON 快照，适合保存到文件、传给前端或调试。
     return graph.to_dict()
 
 
 def graph_events_to_jsonl(graph: KnowledgeGraph) -> str:
-    # 事件日志采用 JSONL 形式最方便：一行一条事件，便于后续增量追加和流式消费。
     return "\n".join(_json(event.to_dict()) for event in graph.events)
 
 
 def graph_to_mermaid(graph: KnowledgeGraph, *, title: str = "Dynamic Waste Knowledge Graph") -> str:
-    lines: List[str] = [
-        "flowchart TD",
-        f'  %% {title}',
-        "  subgraph LT[长期知识层]",
-    ]
+    lines = ["flowchart TD", f"  %% {title}", "  subgraph LT[长期知识层]"]
     for name, spec in graph.categories.items():
-        label = f"{name}\\n{spec.category}\\nR:{spec.risk_level}\\nF:{spec.fragility}\\nG:{spec.graspability}"
-        lines.append(f'    LT_{_sanitize_neo4j_type(name)}["{label}"]')
-        lines.append(f"    class LT_{_sanitize_neo4j_type(name)} category")
+        node_id = f"CAT_{_safe(name)}"
+        lines.append(f'    {node_id}["{name}\\nR:{spec.risk_level} F:{spec.fragility} G:{spec.graspability_prior}"]')
+        lines.append(f"    class {node_id} category")
     lines.append("  end")
 
     lines.append("  subgraph ST[短期记忆层]")
+    for scene_id in graph.scenes:
+        lines.append(f'    SC_{_safe(scene_id)}["Scene\\n{scene_id}"]')
+        lines.append(f"    class SC_{_safe(scene_id)} scene")
     for instance_id, instance in graph.instances.items():
-        label = f"{instance_id}\\n{instance.class_name}\\nP:{instance.priority}\\n{instance.task_status}"
-        lines.append(f'    ST_{_sanitize_neo4j_type(instance_id)}["{label}"]')
-        if instance.risk_level in {"high", "critical", "hazardous"}:
-            lines.append(f"    class ST_{_sanitize_neo4j_type(instance_id)} hazard")
-        else:
-            lines.append(f"    class ST_{_sanitize_neo4j_type(instance_id)} instance")
-        if instance.class_name in graph.categories:
-            lines.append(
-                f"    LT_{_sanitize_neo4j_type(instance.class_name)} -->|belongs_to| ST_{_sanitize_neo4j_type(instance_id)}"
-            )
+        lines.append(f'    IN_{_safe(instance_id)}["{instance_id}\\n{instance.recognition_status}\\n{instance.current_handling_policy}"]')
+        lines.append(f"    class IN_{_safe(instance_id)} instance")
+    for sample_id in graph.unknown_samples:
+        lines.append(f'    US_{_safe(sample_id)}["UnknownSample\\n{sample_id}"]')
+        lines.append(f"    class US_{_safe(sample_id)} unknown")
+    for cluster_id in graph.unknown_clusters:
+        lines.append(f'    UC_{_safe(cluster_id)}["UnknownCluster\\n{cluster_id}"]')
+        lines.append(f"    class UC_{_safe(cluster_id)} unknown")
     lines.append("  end")
 
     lines.append("  subgraph EV[事件日志层]")
-    for event in graph.events[-25:]:
-        event_node = f"EV_{_sanitize_neo4j_type(event.event_id)}"
-        label = f"{event.event_type}\\n{event.timestamp.isoformat()}"
-        lines.append(f'    {event_node}["{label}"]')
-        lines.append(f"    class {event_node} event")
-        if event.subject_id in graph.instances:
-            lines.append(f"    {event_node} --> ST_{_sanitize_neo4j_type(event.subject_id)}")
-        elif event.subject_id in graph.categories:
-            lines.append(f"    {event_node} --> LT_{_sanitize_neo4j_type(event.subject_id)}")
+    for event in graph.events:
+        lines.append(f'    EV_{_safe(event.event_id)}["{event.event_type}\\n{event.event_source}"]')
+        lines.append(f"    class EV_{_safe(event.event_id)} event")
     lines.append("  end")
 
+    node_ids = _mermaid_node_ids(graph)
     for edge in graph.edges.values():
-        lines.append(
-            f"  ST_{_sanitize_neo4j_type(edge.source_id)} -->|{edge.relation}| ST_{_sanitize_neo4j_type(edge.target_id)}"
-        )
-
+        source = node_ids.get(edge.source_id)
+        target = node_ids.get(edge.target_id)
+        if source and target:
+            lines.append(f"  {source} -->|{edge.relation}| {target}")
     lines.extend(
         [
-            "  classDef category fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20,stroke-width:1px;",
-            "  classDef instance fill:#e3f2fd,stroke:#1565c0,color:#0d47a1,stroke-width:1px;",
-            "  classDef hazard fill:#ffebee,stroke:#c62828,color:#b71c1c,stroke-width:2px;",
-            "  classDef event fill:#fff3e0,stroke:#ef6c00,color:#e65100,stroke-width:1px;",
+            "  classDef category fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20;",
+            "  classDef scene fill:#ede7f6,stroke:#5e35b1,color:#311b92;",
+            "  classDef instance fill:#e3f2fd,stroke:#1565c0,color:#0d47a1;",
+            "  classDef unknown fill:#fff8e1,stroke:#f9a825,color:#e65100;",
+            "  classDef event fill:#fce4ec,stroke:#ad1457,color:#880e4f;",
         ]
     )
     return "\n".join(lines)
@@ -187,74 +91,67 @@ def graph_to_mermaid(graph: KnowledgeGraph, *, title: str = "Dynamic Waste Knowl
 
 def graph_to_neo4j_cypher(graph: KnowledgeGraph) -> List[str]:
     statements: List[str] = []
-    for spec in graph.categories.values():
-        statements.append(_category_merge_statement(spec))
-
-    for instance in graph.instances.values():
-        statements.extend(_instance_merge_statements(instance))
-
-    for edge in graph.edges.values():
-        statements.append(_relation_merge_statement(edge))
-
+    node_refs: Dict[str, Tuple[str, str, str]] = {}
+    for name, spec in graph.categories.items():
+        props = spec.to_dict()
+        props["visual_prototype_json"] = json.dumps(props.pop("visual_prototype"), ensure_ascii=True, sort_keys=True)
+        statements.append(f"MERGE (n:WasteCategory {{category_name: {_neo4j_literal(name)}}}) SET n += {_neo4j_map(props)}")
+        node_refs[name] = ("WasteCategory", "category_name", name)
+    for scene_id, scene in graph.scenes.items():
+        statements.append(f"MERGE (n:Scene {{scene_id: {_neo4j_literal(scene_id)}}}) SET n += {_neo4j_map(scene.to_dict())}")
+        node_refs[scene_id] = ("Scene", "scene_id", scene_id)
+    for instance_id, instance in graph.instances.items():
+        statements.append(f"MERGE (n:ObjectInstance {{instance_id: {_neo4j_literal(instance_id)}}}) SET n += {_neo4j_map(instance.to_dict())}")
+        node_refs[instance_id] = ("ObjectInstance", "instance_id", instance_id)
+    for sample_id, sample in graph.unknown_samples.items():
+        props = sample.to_dict()
+        props["yolo_topk_json"] = json.dumps(props.pop("yolo_topk"), ensure_ascii=True, sort_keys=True)
+        props["vlm_attributes_json"] = json.dumps(props.pop("vlm_attributes"), ensure_ascii=True, sort_keys=True)
+        statements.append(f"MERGE (n:UnknownSample {{sample_id: {_neo4j_literal(sample_id)}}}) SET n += {_neo4j_map(props)}")
+        node_refs[sample_id] = ("UnknownSample", "sample_id", sample_id)
+    for cluster_id, cluster in graph.unknown_clusters.items():
+        props = cluster.to_dict()
+        props["prototype_attributes_json"] = json.dumps(props.pop("prototype_attributes"), ensure_ascii=True, sort_keys=True)
+        statements.append(f"MERGE (n:UnknownCluster {{cluster_id: {_neo4j_literal(cluster_id)}}}) SET n += {_neo4j_map(props)}")
+        node_refs[cluster_id] = ("UnknownCluster", "cluster_id", cluster_id)
     for event in graph.events:
-        statements.extend(_event_merge_statement(event, graph))
-
+        props = _event_props(event)
+        label = event.event_type
+        statements.append(f"MERGE (n:Event:{label} {{event_id: {_neo4j_literal(event.event_id)}}}) SET n += {_neo4j_map(props)}")
+        node_refs[event.event_id] = (label, "event_id", event.event_id)
+    for edge in graph.edges.values():
+        source = node_refs.get(edge.source_id)
+        target = node_refs.get(edge.target_id)
+        if source is None or target is None:
+            continue
+        statements.append(_relation_statement(source, edge.relation, target))
     return statements
 
 
-def _instance_merge_statements(instance: ObjectInstance) -> List[str]:
-    props = _flatten_instance_props(instance)
-    statements = [f"MERGE (i:Instance {_neo4j_map({'instance_id': instance.instance_id})}) SET i += {_neo4j_map(props)}"]
-    if instance.class_name:
-        statements.append(
-            f"MATCH (i:Instance {{instance_id: {_neo4j_literal(instance.instance_id)}}}), "
-            f"(c:Category {{name: {_neo4j_literal(instance.class_name)}}}) MERGE (i)-[:OF_CATEGORY]->(c)"
-        )
-    return statements
+def _event_props(event: GraphEvent) -> Dict[str, Any]:
+    props = event.to_dict()
+    for key, value in list(props.items()):
+        if isinstance(value, (dict, list, tuple)):
+            props[f"{key}_json"] = json.dumps(value, ensure_ascii=True, sort_keys=True)
+            del props[key]
+    return props
 
 
-def _relation_merge_statement(edge: RelationEdge) -> str:
-    relation_type = _sanitize_neo4j_type(edge.relation, fallback="RELATED_TO")
-    props = _flatten_relation_props(edge)
-    props["source_id"] = edge.source_id
-    props["relation"] = edge.relation
-    props["target_id"] = edge.target_id
+def _relation_statement(source: Tuple[str, str, str], relation: str, target: Tuple[str, str, str]) -> str:
+    source_label, source_key, source_value = source
+    target_label, target_key, target_value = target
     return (
-        f"MATCH (s:Instance {{instance_id: {_neo4j_literal(edge.source_id)}}}), "
-        f"(t:Instance {{instance_id: {_neo4j_literal(edge.target_id)}}}) "
-        f"MERGE (s)-[r:{relation_type}]->(t) "
-        f"SET r += {_neo4j_map(props)}"
+        f"MATCH (s:{source_label} {{{source_key}: {_neo4j_literal(source_value)}}}), "
+        f"(t:{target_label} {{{target_key}: {_neo4j_literal(target_value)}}}) "
+        f"MERGE (s)-[:{relation}]->(t)"
     )
 
 
-def _category_merge_statement(spec) -> str:
-    props = _flatten_category_props(spec)
-    return f"MERGE (c:Category {{name: {_neo4j_literal(spec.name)}}}) SET c += {_neo4j_map(props)}"
-
-def _event_merge_statement(event: GraphEvent, graph: KnowledgeGraph) -> List[str]:
-    event_props = _flatten_event_props(event)
-    lines = [f"MERGE (e:Event {{event_id: {_neo4j_literal(event.event_id)}}}) SET e += {_neo4j_map(event_props)}"]
-    if event.subject_id in graph.instances:
-        lines.append(
-            f"MATCH (e:Event {{event_id: {_neo4j_literal(event.event_id)}}}), "
-            f"(i:Instance {{instance_id: {_neo4j_literal(event.subject_id)}}}) MERGE (e)-[:ABOUT_INSTANCE]->(i)"
-        )
-    elif event.subject_id in graph.categories:
-        lines.append(
-            f"MATCH (e:Event {{event_id: {_neo4j_literal(event.event_id)}}}), "
-            f"(c:Category {{name: {_neo4j_literal(event.subject_id)}}}) MERGE (e)-[:ABOUT_CATEGORY]->(c)"
-        )
-    after_state = event.after_state if isinstance(event.after_state, dict) else {}
-    source_id = after_state.get("source_id")
-    target_id = after_state.get("target_id")
-    if source_id in graph.instances:
-        lines.append(
-            f"MATCH (e:Event {{event_id: {_neo4j_literal(event.event_id)}}}), "
-            f"(i:Instance {{instance_id: {_neo4j_literal(source_id)}}}) MERGE (e)-[:SOURCE_INSTANCE]->(i)"
-        )
-    if target_id in graph.instances:
-        lines.append(
-            f"MATCH (e:Event {{event_id: {_neo4j_literal(event.event_id)}}}), "
-            f"(i:Instance {{instance_id: {_neo4j_literal(target_id)}}}) MERGE (e)-[:TARGET_INSTANCE]->(i)"
-        )
-    return lines
+def _mermaid_node_ids(graph: KnowledgeGraph) -> Dict[str, str]:
+    result = {name: f"CAT_{_safe(name)}" for name in graph.categories}
+    result.update({scene_id: f"SC_{_safe(scene_id)}" for scene_id in graph.scenes})
+    result.update({instance_id: f"IN_{_safe(instance_id)}" for instance_id in graph.instances})
+    result.update({sample_id: f"US_{_safe(sample_id)}" for sample_id in graph.unknown_samples})
+    result.update({cluster_id: f"UC_{_safe(cluster_id)}" for cluster_id in graph.unknown_clusters})
+    result.update({event.event_id: f"EV_{_safe(event.event_id)}" for event in graph.events})
+    return result

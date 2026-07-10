@@ -1,4 +1,4 @@
-"""验证 test llm reviewer 相关功能。"""
+﻿"""验证 test llm reviewer 相关功能。"""
 
 import json
 import os
@@ -53,7 +53,7 @@ class OpenAICompatibleReviewerTests(unittest.TestCase):
         image_blocks = [block for block in content if block["type"] == "image_url"]
         self.assertEqual(len(image_blocks), 3)
         self.assertTrue(all(block["image_url"]["url"].startswith("data:image/jpeg;base64,") for block in image_blocks))
-        self.assertIn("decision", content[0]["text"])
+        self.assertIn("hypothesis_check", content[0]["text"])
 
     def test_visual_evidence_can_skip_original_image_for_batch_mode(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -231,8 +231,8 @@ class OpenAICompatibleReviewerTests(unittest.TestCase):
             allowed_classes=["gypsum_board", "glass"],
         )
 
-        self.assertEqual(result.class_name, "gypsum_board")
-        self.assertEqual(result.confidence, 0.0)
+        self.assertEqual(result.class_name, "unknown")
+        self.assertEqual(result.decision, "conflict")
         self.assertTrue(result.need_human_review)
 
     def test_visual_uncertain_result_preserves_yolo_and_routes_to_human_review(self) -> None:

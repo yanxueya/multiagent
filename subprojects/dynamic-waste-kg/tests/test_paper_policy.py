@@ -1,4 +1,4 @@
-"""验证 test paper policy 相关功能。"""
+﻿"""验证 test paper policy 相关功能。"""
 
 from __future__ import annotations
 
@@ -24,10 +24,9 @@ class PaperPolicyTest(unittest.TestCase):
         instance = ObjectInstance(
             instance_id="unknown_01",
             class_name="unknown",
-            confidence=0.95,
-            final_confidence=0.95,
-            review_status="confirmed",
-            processable=True,
+            yolo_confidence=0.95,
+            recognition_status="unknown",
+            current_handling_policy="robot_forbidden",
         )
 
         result = route_instance(instance, self.categories)
@@ -39,46 +38,43 @@ class PaperPolicyTest(unittest.TestCase):
         instance = ObjectInstance(
             instance_id="brick_01",
             class_name="brick",
-            confidence=0.91,
-            final_confidence=0.91,
-            review_status="confirmed",
-            processable=True,
+            yolo_confidence=0.91,
+            recognition_status="accepted",
+            current_handling_policy="auto_allowed",
         )
 
         result = route_instance(instance, self.categories)
 
         self.assertEqual(result.route, AUTO_CANDIDATE)
-        self.assertIn("auto_processable", result.reason)
+        self.assertIn("auto_allowed", result.reason)
 
     def test_policy_routes_uncertain_review_as_human_review_required(self) -> None:
         instance = ObjectInstance(
             instance_id="metal_01",
             class_name="metal",
-            confidence=0.84,
-            final_confidence=0.84,
-            review_status="uncertain",
-            processable=True,
+            yolo_confidence=0.84,
+            recognition_status="review_required",
+            current_handling_policy="human_review_required",
         )
 
         result = route_instance(instance, self.categories)
 
         self.assertEqual(result.route, HUMAN_REVIEW_REQUIRED)
-        self.assertIn("review_status", result.reason)
+        self.assertIn("recognition_status", result.reason)
 
-    def test_policy_routes_robot_with_supervision_class_as_supervised_candidate(self) -> None:
+    def test_policy_routes_human_review_class_as_human_review_required(self) -> None:
         instance = ObjectInstance(
             instance_id="tile_01",
             class_name="tile",
-            confidence=0.92,
-            final_confidence=0.92,
-            review_status="confirmed",
-            processable=True,
+            yolo_confidence=0.92,
+            recognition_status="accepted",
+            current_handling_policy="human_review_required",
         )
 
         result = route_instance(instance, self.categories)
 
-        self.assertEqual(result.route, SUPERVISED_CANDIDATE)
-        self.assertIn("robot_with_supervision", result.reason)
+        self.assertEqual(result.route, HUMAN_REVIEW_REQUIRED)
+        self.assertIn("current_handling_policy=human_review_required", result.reason)
 
     def test_policy_metrics_penalize_unsafe_automation(self) -> None:
         cases = [

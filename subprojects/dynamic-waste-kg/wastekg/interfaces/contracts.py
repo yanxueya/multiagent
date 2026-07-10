@@ -1,4 +1,4 @@
-"""定义多智能体和 ROS2 对接契约。"""
+﻿"""定义多智能体和 ROS2 对接契约。"""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from wastekg.core.models import BBox3D, GraphEvent, Observation, Quaternion, Vector3, DetectedObject, DetectedRelation
+from wastekg.core.models import BBox2D, BBox3D, Observation, Quaternion, Vector3, DetectedObject, DetectedRelation
 from wastekg.graph.query import build_planning_context
 from wastekg.graph.store import KnowledgeGraph
 
@@ -21,7 +21,12 @@ class VisionDetection:
     yolo_confidence: float
     llm_class_name: str = ""
     llm_confidence: float = 0.0
+    bbox_2d: Optional[BBox2D] = None
+    mask_ref: str = ""
+    crop_ref: str = ""
     center_xyz: Vector3 = (0.0, 0.0, 0.0)
+    depth_valid_ratio: float = 0.0
+    observed_extent_3d: Vector3 = (0.0, 0.0, 0.0)
     orientation: Quaternion = (0.0, 0.0, 0.0, 1.0)
     bbox_3d: Optional[BBox3D] = None
     risk_hint: str = "unknown"
@@ -39,19 +44,27 @@ class VisionDetection:
             and self.llm_confidence >= UNKNOWN_REVIEW_MIN_CONFIDENCE
         )
 
+    def has_review_conflict(self) -> bool:
+        return self.metadata.get("review_decision") == "conflict" or (
+            bool(self.llm_class_name)
+            and self.llm_class_name != self.yolo_class_name
+            and self.llm_class_name not in UNKNOWN_REVIEW_CLASSES
+        )
+
     def resolved_class_name(self) -> str:
-        # unknown 是系统生成的人工复核状态，不是 YOLO 训练类别。
-        if self.has_hazard_review():
-            return self.llm_class_name
-        # YOLO 负责初筛，大模型负责复核。若大模型有更强置信度，优先采用其结果。
-        if self.llm_class_name and self.llm_confidence >= self.yolo_confidence:
-            return self.llm_class_name
+        # 类别节点通过 CANDIDATE_OF/CONFIRMED_AS 表达；VLM 冲突只改变识别状态。
         return self.yolo_class_name
+
+    def recognition_status(self) -> str:
+        decision = str(self.metadata.get("review_decision", "")).lower()
+        if self.has_hazard_review() or self.has_review_conflict() or decision in {"unknown", "conflict"}:
+            return "unknown"
+        if self.metadata.get("need_human_review") or decision in {"insufficient", "uncertain", "review_error"}:
+            return "review_required"
+        return "accepted"
 
     def resolved_confidence(self) -> float:
         if self.has_hazard_review():
-            return self.llm_confidence
-        if self.llm_class_name and self.llm_confidence >= self.yolo_confidence:
             return self.llm_confidence
         return self.yolo_confidence
 
@@ -64,8 +77,6 @@ class VisionDetection:
             return "not_reviewed"
         if self.llm_class_name == self.yolo_class_name:
             return "review_agreed"
-        if self.llm_confidence >= self.yolo_confidence:
-            return "llm_override"
         return "review_conflict"
 
 # 感知层只提交临时关系提示，实例级关系由知识图谱解析后落库。
@@ -121,13 +132,18 @@ def vision_packet_to_observation(packet: VisionPacket) -> Observation:
     objects = [
         DetectedObject(
             temp_id=detection.temp_id,
-            class_name=detection.resolved_class_name(),
-            confidence=detection.resolved_confidence(),
+            class_name=detection.yolo_class_name,
+            confidence=detection.yolo_confidence,
             yolo_confidence=detection.yolo_confidence,
+            bbox_2d=detection.bbox_2d,
+            mask_ref=detection.mask_ref,
+            crop_ref=detection.crop_ref,
             llm_confidence=detection.llm_confidence,
             final_confidence=detection.resolved_confidence(),
             review_status=detection.review_status(),
             center_xyz=detection.center_xyz,
+            depth_valid_ratio=detection.depth_valid_ratio,
+            observed_extent_3d=detection.observed_extent_3d,
             orientation=detection.orientation,
             bbox_3d=detection.bbox_3d,
             risk_level=detection.risk_hint,
@@ -143,6 +159,12 @@ def vision_packet_to_observation(packet: VisionPacket) -> Observation:
                 "llm_confidence": detection.llm_confidence,
                 "final_confidence": detection.resolved_confidence(),
                 "review_status": detection.review_status(),
+                "candidate_class": detection.metadata.get("candidate_class", detection.yolo_class_name),
+                "recognition_status": detection.recognition_status(),
+                "bbox_2d": list(detection.bbox_2d) if detection.bbox_2d is not None else detection.metadata.get("bbox_2d"),
+                "mask_ref": detection.mask_ref or detection.metadata.get("mask_ref", ""),
+                "crop_ref": detection.crop_ref or detection.metadata.get("crop_ref", ""),
+                "depth_valid_ratio": detection.depth_valid_ratio,
             },
         )
         for detection in packet.detections
@@ -204,33 +226,17 @@ def build_ros2_action_command(action_type: str, target_instance_id: str, paramet
 
 
 def apply_execution_feedback(graph: KnowledgeGraph, feedback: ExecutionFeedback) -> Dict[str, Any]:
-    # ROS2 执行后的反馈写回图谱，让短期记忆真正形成闭环。
+    # 只有真实机械臂执行才增加 attempt_count，并生成 ExecutionEvent。
     status = feedback.status.lower()
-    if status == "success":
-        graph.mark_processed(feedback.target_instance_id, action=feedback.message or feedback.action_id, source="ros2_executor")
-    else:
-        instance = graph.instances.get(feedback.target_instance_id)
-        before = instance.to_dict() if instance is not None else {}
-        after = dict(before)
-        after["task_status"] = "blocked" if status in {"blocked", "failed"} else status
-        if instance is not None:
-            instance.task_status = after["task_status"]
-            instance.last_action = feedback.message or feedback.action_id
-            instance.touch(frame_id=instance.last_seen_frame, source="ros2_executor")
-        graph.events.append(
-            GraphEvent(
-                event_type="execution_feedback",
-                subject_id=feedback.target_instance_id,
-                before_state=before,
-                after_state=after,
-                source="ros2_executor",
-                metadata={
-                    "action_id": feedback.action_id,
-                    "message": feedback.message,
-                    **dict(feedback.metadata),
-                },
-            )
-        )
+    result = "success" if status == "success" else "failure"
+    instance = graph.instances[feedback.target_instance_id]
+    scene_id = str(feedback.metadata.get("scene_id") or instance.last_seen_scene or "scene_unknown")
+    graph.record_execution_event(
+        scene_id,
+        feedback.target_instance_id,
+        execution_result=result,
+        failure_reason="" if result == "success" else (feedback.message or status),
+    )
     return {
         "action_id": feedback.action_id,
         "target_instance_id": feedback.target_instance_id,

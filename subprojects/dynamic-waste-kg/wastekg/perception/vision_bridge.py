@@ -11,6 +11,7 @@ from wastekg.core.taxonomy import canonicalize_category_name
 Vector3 = Tuple[float, float, float]
 Quaternion = Tuple[float, float, float, float]
 BBox3D = Tuple[float, float, float, float, float, float]
+BBox2D = Tuple[float, float, float, float]
 
 
 def _as_vector3(value: Any, fallback: Vector3 = (0.0, 0.0, 0.0)) -> Vector3:
@@ -34,6 +35,12 @@ def _as_bbox3d(value: Any) -> Optional[BBox3D]:
         return None
     if isinstance(value, Sequence) and len(value) >= 6:
         return (float(value[0]), float(value[1]), float(value[2]), float(value[3]), float(value[4]), float(value[5]))
+    return None
+
+
+def _as_bbox2d(value: Any) -> Optional[BBox2D]:
+    if isinstance(value, Sequence) and len(value) >= 4:
+        return (float(value[0]), float(value[1]), float(value[2]), float(value[3]))
     return None
 
 
@@ -63,9 +70,14 @@ def vision_detection_from_record(record: Mapping[str, Any]) -> VisionDetection:
         yolo_confidence=float(_pick_first(record, "yolo_confidence", "confidence", default=0.0)),
         llm_class_name=canonicalize_category_name(str(_pick_first(record, "llm_class_name", default=""))),
         llm_confidence=float(_pick_first(record, "llm_confidence", default=0.0)),
+        bbox_2d=_as_bbox2d(_pick_first(record, "bbox_2d", "bbox", default=None)),
+        mask_ref=str(_pick_first(record, "mask_ref", default="")),
+        crop_ref=str(_pick_first(record, "crop_ref", default="")),
         center_xyz=_as_vector3(_pick_first(record, "center_xyz", "center", default=None)),
+        depth_valid_ratio=float(_pick_first(record, "depth_valid_ratio", default=0.0)),
+        observed_extent_3d=_as_vector3(_pick_first(record, "observed_extent_3d", "estimated_size_3d", default=None)),
         orientation=_as_quaternion(_pick_first(record, "orientation", default=None)),
-        bbox_3d=_as_bbox3d(_pick_first(record, "bbox_3d", "bbox", default=None)),
+        bbox_3d=_as_bbox3d(_pick_first(record, "bbox_3d", default=None)),
         risk_hint=str(_pick_first(record, "risk_hint", "risk_level", default="unknown")),
         mask_polygon=_as_point_list(_pick_first(record, "mask_polygon", "segmentation", default=None)),
         boundary_points=_as_point_list(_pick_first(record, "boundary_points", "boundary", default=None)),

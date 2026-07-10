@@ -1,4 +1,4 @@
-"""把 YOLO/VLM 感知记录写入知识图谱。"""
+﻿"""把 YOLO/VLM 感知记录写入知识图谱。"""
 
 from __future__ import annotations
 
@@ -13,18 +13,25 @@ from wastekg.perception.vision_bridge import build_vision_packet_from_records
 
 @dataclass(slots=True)
 class PerceptionPolicy:
-    high_confidence: float = 0.85
-    review_confidence: float = 0.40
-    unknown_confidence: float = 0.40
-    review_categories: set[str] = field(default_factory=lambda: {"glass", "gypsum_board", "tile", "metal", "soft_plastic", "hard_plastic", "paperboard", "foam"})
+    proposal_confidence: float = 0.05
+    review_confidence: float = 0.30
+    accept_confidence: float = 0.75
+    unknown_confidence: float = 0.30
+    review_categories: set[str] = field(default_factory=lambda: {"glass", "gypsum_board"})
+    accept_thresholds: Dict[str, float] = field(default_factory=dict)
+
+    @property
+    def high_confidence(self) -> float:
+        return self.accept_confidence
 
     def needs_review(self, class_name: str, confidence: float) -> bool:
         canonical = canonicalize_category_name(class_name)
-        return canonical in self.review_categories or self.review_confidence <= confidence < self.high_confidence
+        accept_threshold = self.accept_thresholds.get(canonical, self.accept_confidence)
+        return canonical in self.review_categories or self.review_confidence <= confidence < accept_threshold
 
     def should_be_unknown(self, class_name: str, confidence: float) -> bool:
         canonical = canonicalize_category_name(class_name)
-        return canonical == UNKNOWN_CATEGORY or confidence < self.unknown_confidence
+        return canonical == UNKNOWN_CATEGORY or self.proposal_confidence <= confidence < self.unknown_confidence
 
 
 @dataclass(slots=True)
@@ -34,6 +41,9 @@ class ReviewResult:
     risk_hint: str = "unknown"
     reason: str = ""
     need_human_review: bool = False
+    consistency_status: str = "not_checked"
+    consistency_score: float = 0.0
+    visual_attributes: Dict[str, Any] = field(default_factory=dict)
     # ``legacy`` preserves compatibility with the initial text-only reviewer.
     decision: str = "legacy"
 
@@ -61,8 +71,10 @@ def build_records_with_optional_review(
         record["yolo_class_name"] = yolo_class_name
         record["yolo_confidence"] = yolo_confidence
 
+        if yolo_confidence < policy.proposal_confidence:
+            continue
+
         if policy.should_be_unknown(yolo_class_name, yolo_confidence):
-            record["yolo_class_name"] = UNKNOWN_CATEGORY
             record["llm_class_name"] = ""
             record["llm_confidence"] = 0.0
             record["risk_hint"] = "unknown"
@@ -71,6 +83,7 @@ def build_records_with_optional_review(
                 {
                     "need_human_review": True,
                     "review_decision": "unknown",
+                    "recognition_status": "unknown",
                     "unknown_reason": f"yolo_confidence<{policy.unknown_confidence:.2f}",
                     "original_yolo_class_name": yolo_class_name,
                 }
@@ -103,15 +116,45 @@ def build_records_with_optional_review(
                 )
                 record.setdefault("metadata", {})["review_error_type"] = type(exc).__name__
                 record.setdefault("metadata", {})["review_error_message"] = str(exc)
-            record["llm_class_name"] = canonicalize_category_name(review.class_name)
+            llm_class_name = canonicalize_category_name(review.class_name)
+            review_decision = review.decision
+            if review_decision == "legacy":
+                if llm_class_name == yolo_class_name:
+                    review_decision = "support"
+                elif llm_class_name == UNKNOWN_CATEGORY:
+                    review_decision = "unknown"
+                else:
+                    review_decision = "conflict"
+            record["llm_class_name"] = llm_class_name
             record["llm_confidence"] = review.confidence
             record["risk_hint"] = review.risk_hint
             record.setdefault("metadata", {})
             record["metadata"].update(
                 {
                     "review_reason": review.reason,
-                    "need_human_review": review.need_human_review,
-                    "review_decision": review.decision,
+                    "need_human_review": review.need_human_review or review_decision in {"conflict", "insufficient", "unknown"},
+                    "review_decision": review_decision,
+                    "vlm_consistency_status": review.consistency_status if review.consistency_status != "not_checked" else review_decision,
+                    "vlm_consistency_score": review.consistency_score,
+                    "visual_attributes": dict(review.visual_attributes),
+                    "candidate_class": yolo_class_name,
+                    "recognition_status": "accepted" if review_decision == "support" else ("unknown" if review_decision in {"conflict", "unknown"} else "review_required"),
+                }
+            )
+        elif policy.needs_review(yolo_class_name, yolo_confidence):
+            record.setdefault("metadata", {}).update(
+                {
+                    "candidate_class": yolo_class_name,
+                    "need_human_review": True,
+                    "review_decision": "not_checked",
+                    "recognition_status": "review_required",
+                }
+            )
+        else:
+            record.setdefault("metadata", {}).update(
+                {
+                    "candidate_class": yolo_class_name,
+                    "recognition_status": "accepted",
                 }
             )
         records.append(record)

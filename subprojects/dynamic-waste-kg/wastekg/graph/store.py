@@ -1,10 +1,9 @@
-"""维护内存知识图谱状态、关系和事件日志。"""
+"""维护文档定义的三层动态知识图谱、关系和追加式事件日志。"""
 
 from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import replace
-from datetime import timedelta
 from math import sqrt
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -16,487 +15,499 @@ from wastekg.core.models import (
     ObjectInstance,
     Observation,
     RelationEdge,
+    Scene,
+    UnknownCluster,
+    UnknownSample,
 )
-from wastekg.core.taxonomy import canonicalize_category_name
+from wastekg.core.taxonomy import UNKNOWN_CATEGORY, canonicalize_category_name
+
+
+ALLOWED_RELATIONS = {
+    "CONTAINS",
+    "CANDIDATE_OF",
+    "CONFIRMED_AS",
+    "NEAR",
+    "RECORDED_AS",
+    "MEMBER_OF",
+    "IN_SCENE",
+    "DETECTED",
+    "PROPOSED",
+    "REVIEWS",
+    "CHECKS_AGAINST",
+    "CONFIRMS",
+    "UPDATES",
+    "SELECTS",
+    "EXECUTES_ON",
+    "CREATES",
+}
 
 
 class KnowledgeGraph:
+    """三层 KG：长期类别、短期场景记忆、七类事件节点。"""
+
     def __init__(self, *, match_distance_threshold: float = 0.25, stale_after_seconds: int = 30) -> None:
         self.match_distance_threshold = match_distance_threshold
         self.stale_after_seconds = stale_after_seconds
-        # categories 存长期类别知识；instances 存短期场景对象；edges 和 events 用于关系与审计追踪。
         self.categories: Dict[str, CategorySpec] = {}
+        self.scenes: Dict[str, Scene] = {}
         self.instances: Dict[str, ObjectInstance] = {}
+        self.unknown_samples: Dict[str, UnknownSample] = {}
+        self.unknown_clusters: Dict[str, UnknownCluster] = {}
         self.edges: Dict[Tuple[str, str, str], RelationEdge] = {}
         self.events: List[GraphEvent] = []
         self._track_map: Dict[str, str] = {}
         self._class_counters: Dict[str, int] = defaultdict(int)
+        self._unknown_counter = 0
 
     def register_category(self, category: CategorySpec) -> None:
-        self.categories[category.name] = category
-        self.events.append(
-            GraphEvent(
-                event_type="category_register",
-                subject_id=category.name,
-                after_state={
-                    "category": category.category,
-                    "risk_level": category.risk_level,
-                    "fragility": category.fragility,
-                    "graspability": category.graspability,
-                    "pollution_level": category.pollution_level,
-                    "recognition_difficulty": category.recognition_difficulty,
-                    "handling_mode": category.handling_mode,
-                    "grasp_difficulty": category.grasp_difficulty,
-                    "needs_llm_review": category.needs_llm_review,
-                    "auto_processable": category.auto_processable,
-                    "visual_prototype": {key: list(values) for key, values in category.visual_prototype.items()},
-                },
-                source="system",
-            )
-        )
+        """注册长期 WasteCategory；初始种子不产生事件。"""
 
-    def generate_instance_id(self, class_name: str) -> str:
-        self._class_counters[class_name] += 1
-        return f"{class_name}_{self._class_counters[class_name]:02d}"
+        self.categories[category.name] = category
+
+    def generate_instance_id(self, candidate_class: str) -> str:
+        candidate_class = canonicalize_category_name(candidate_class)
+        prefix = candidate_class if candidate_class != UNKNOWN_CATEGORY else "unknown"
+        self._class_counters[prefix] += 1
+        return f"{prefix}_{self._class_counters[prefix]:02d}"
 
     def upsert_instance(self, instance: ObjectInstance, *, source: str = "system") -> ObjectInstance:
+        """合并实例状态，不产生文档之外的通用 create/update 事件。"""
+
         before = self.instances.get(instance.instance_id)
         if before is None:
-            instance.touch(frame_id=instance.last_seen_frame, source=source)
+            instance.touch(scene_id=instance.last_seen_scene)
             self.instances[instance.instance_id] = instance
-            self.events.append(
-                GraphEvent(
-                    event_type="instance_create",
-                    subject_id=instance.instance_id,
-                    after_state=instance.to_dict(),
-                    source=source,
-                )
-            )
             return instance
 
-        # 合并策略偏保守：置信度和优先级取更可靠值，状态字段用新观测补全旧实例。
         merged = replace(
             before,
-            class_name=instance.class_name or before.class_name,
-            center_xyz=instance.center_xyz or before.center_xyz,
-            orientation=instance.orientation or before.orientation,
-            bbox_3d=instance.bbox_3d if instance.bbox_3d is not None else before.bbox_3d,
-            confidence=max(before.confidence, instance.confidence),
             yolo_confidence=max(before.yolo_confidence, instance.yolo_confidence),
-            llm_confidence=max(before.llm_confidence, instance.llm_confidence),
-            final_confidence=max(before.final_confidence, instance.final_confidence),
-            review_status=instance.review_status if instance.review_status != "not_reviewed" else before.review_status,
-            priority=max(before.priority, instance.priority),
-            processed_flag=before.processed_flag or instance.processed_flag,
-            last_action=instance.last_action or before.last_action,
+            recognition_status=instance.recognition_status or before.recognition_status,
+            bbox_2d=instance.bbox_2d if instance.bbox_2d is not None else before.bbox_2d,
+            mask_ref=instance.mask_ref or before.mask_ref,
+            crop_ref=instance.crop_ref or before.crop_ref,
+            center_xyz_camera=instance.center_xyz_camera,
+            depth_valid_ratio=instance.depth_valid_ratio if instance.depth_valid_ratio > 0 else before.depth_valid_ratio,
+            observed_extent_3d=instance.observed_extent_3d if any(instance.observed_extent_3d) else before.observed_extent_3d,
+            occlusion_state=instance.occlusion_state if instance.occlusion_state != "unknown" else before.occlusion_state,
+            vlm_consistency=instance.vlm_consistency if instance.vlm_consistency != "not_checked" else before.vlm_consistency,
+            current_handling_policy=instance.current_handling_policy or before.current_handling_policy,
             task_status=instance.task_status or before.task_status,
-            risk_level=instance.risk_level or before.risk_level,
-            fragility_level=instance.fragility_level or before.fragility_level,
-            graspability_level=instance.graspability_level or before.graspability_level,
-            pollution_level=instance.pollution_level or before.pollution_level,
-            handling_mode=instance.handling_mode or before.handling_mode,
-            grasp_difficulty=instance.grasp_difficulty or before.grasp_difficulty,
-            occlusion_state=instance.occlusion_state or before.occlusion_state,
-            contact_state=instance.contact_state or before.contact_state,
-            support_state=instance.support_state or before.support_state,
-            movable=before.movable and instance.movable,
-            graspable=before.graspable and instance.graspable,
-            processable=before.processable and instance.processable,
-            mask_polygon=instance.mask_polygon or before.mask_polygon,
-            boundary_points=instance.boundary_points or before.boundary_points,
-            visible_area_ratio=min(before.visible_area_ratio, instance.visible_area_ratio),
-            grasp_candidates=instance.grasp_candidates or before.grasp_candidates,
-            safe_grasp_score=max(before.safe_grasp_score, instance.safe_grasp_score),
-            blocked_by=list(sorted(set(before.blocked_by + instance.blocked_by))),
-            supports=list(sorted(set(before.supports + instance.supports))),
-            task_relevance=max(before.task_relevance, instance.task_relevance),
-            observed_aliases=list(sorted(set(before.observed_aliases + instance.observed_aliases))),
-            observation_count=before.observation_count,
-            last_seen_frame=instance.last_seen_frame or before.last_seen_frame,
-            source=instance.source or before.source,
-            metadata={**before.metadata, **instance.metadata},
+            attempt_count=max(before.attempt_count, instance.attempt_count),
+            class_name=instance.class_name or before.class_name,
+            last_seen_scene=instance.last_seen_scene or before.last_seen_scene,
         )
-        merged.touch(frame_id=instance.last_seen_frame or before.last_seen_frame, source=source)
+        merged.touch(scene_id=instance.last_seen_scene or before.last_seen_scene)
         self.instances[instance.instance_id] = merged
-        self.events.append(
-            GraphEvent(
-                event_type="instance_update",
-                subject_id=instance.instance_id,
-                before_state=before.to_dict(),
-                after_state=merged.to_dict(),
-                source=source,
-            )
-        )
         return merged
 
     def add_relation(self, edge: RelationEdge, *, source: str = "system") -> RelationEdge:
-        key = edge.key()
-        before = self.edges.get(key)
-        if before is None:
-            self.edges[key] = edge
-            self._refresh_instance_links(edge)
-            self.events.append(
-                GraphEvent(
-                    event_type="relation_create",
-                    subject_id=edge.source_id,
-                    relation=edge.relation,
-                    after_state=edge.to_dict(),
-                    source=source,
-                )
-            )
-            return edge
+        """写入无属性关系；关系类型必须来自权威文档。"""
 
-        updated = RelationEdge(
-            source_id=edge.source_id,
-            relation=edge.relation,
-            target_id=edge.target_id,
-            confidence=max(before.confidence, edge.confidence),
-            active=edge.active,
-            created_at=before.created_at,
-            updated_at=edge.updated_at,
-            metadata={**before.metadata, **edge.metadata},
-        )
-        self.edges[key] = updated
-        self._refresh_instance_links(updated)
-        self.events.append(
-            GraphEvent(
-                event_type="relation_update",
-                subject_id=edge.source_id,
-                relation=edge.relation,
-                before_state=before.to_dict(),
-                after_state=updated.to_dict(),
-                source=source,
-            )
-        )
-        return updated
+        relation = edge.relation.upper()
+        if relation not in ALLOWED_RELATIONS:
+            raise ValueError(f"Unsupported KG relation: {edge.relation}")
+        normalized = RelationEdge(edge.source_id, relation, edge.target_id)
+        self.edges[normalized.key()] = normalized
+        return normalized
 
     def apply_observation(self, observation: Observation) -> Dict[str, Any]:
+        """创建 Scene、ObjectInstance、检测/复核/深度事件及文档定义关系。"""
+
+        scene_id = str(observation.metadata.get("scene_id") or observation.frame_id)
+        scene = Scene(
+            scene_id=scene_id,
+            captured_at=observation.timestamp,
+            rgb_ref=str(observation.metadata.get("rgb_ref", "")),
+            depth_ref=str(observation.metadata.get("depth_ref", "")),
+        )
+        self.scenes[scene_id] = scene
+
         resolved_ids: Dict[str, str] = {}
         created: List[str] = []
         updated: List[str] = []
-
         for detected in observation.objects:
-            # 先把每个检测框映射成图谱中的“实例节点”
-            # 规则是：同一个 temp_id 优先视为同一对象；否则再尝试按空间位置匹配旧实例。
-            instance, created_flag = self._resolve_detection(detected, observation.frame_id, observation.source)
+            candidate_class = self._candidate_class(detected)
+            instance, created_flag = self._resolve_detection(detected, candidate_class, scene_id)
             resolved_ids[detected.temp_id] = instance.instance_id
-            if created_flag:
-                created.append(instance.instance_id)
-            else:
-                updated.append(instance.instance_id)
+            (created if created_flag else updated).append(instance.instance_id)
             self._track_map[detected.temp_id] = instance.instance_id
             self.upsert_instance(instance, source=observation.source)
-            self._update_category_from_instance(instance)
 
-        # 关系来源包括感知层显式关系，以及基于空间几何推断出的近邻/接触/支撑关系。
-        inferred_relations = list(observation.relations)
-        inferred_relations.extend(self._infer_relations(observation.objects))
-        for relation in inferred_relations:
-            source_id = resolved_ids.get(relation.source_temp_id)
-            target_id = resolved_ids.get(relation.target_temp_id)
-            if not source_id or not target_id:
-                continue
-            self.add_relation(
-                RelationEdge(
-                    source_id=source_id,
-                    relation=relation.relation,
-                    target_id=target_id,
-                    confidence=relation.confidence,
-                    metadata=dict(relation.metadata),
-                ),
-                source=observation.source,
+            self.add_relation(RelationEdge(scene_id, "CONTAINS", instance.instance_id))
+            if candidate_class in self.categories:
+                self.add_relation(RelationEdge(instance.instance_id, "CANDIDATE_OF", candidate_class))
+            detection_event = GraphEvent(
+                event_type="DetectionEvent",
+                attributes={
+                    "yolo_confidence": instance.yolo_confidence,
+                    "bbox_2d": list(instance.bbox_2d) if instance.bbox_2d is not None else None,
+                    "mask_ref": instance.mask_ref,
+                    "crop_ref": instance.crop_ref,
+                },
+            )
+            self._append_event(
+                detection_event,
+                [
+                    ("IN_SCENE", scene_id),
+                    ("DETECTED", instance.instance_id),
+                    *(([("PROPOSED", candidate_class)]) if candidate_class in self.categories else []),
+                ],
             )
 
-        self._refresh_temporal_states()
-        event = GraphEvent(
-            event_type="observation",
-            subject_id=observation.frame_id,
-            after_state={
-                "created_instances": created,
-                "updated_instances": updated,
-                "resolved_ids": resolved_ids,
-            },
-            source=observation.source,
-            metadata=dict(observation.metadata),
-        )
-        self.events.append(event)
+            review_decision = str(detected.metadata.get("review_decision", "not_checked")).lower()
+            if review_decision not in {"", "not_checked", "unknown"}:
+                vlm_event = GraphEvent(
+                    event_type="VLMReviewEvent",
+                    attributes={
+                        "image_quality": str(detected.metadata.get("image_quality", "limited")),
+                        "visual_attributes": dict(detected.metadata.get("visual_attributes", {})),
+                        "consistency": review_decision,
+                        "reason": str(detected.metadata.get("review_reason", "")),
+                    },
+                )
+                self._append_event(
+                    vlm_event,
+                    [
+                        ("REVIEWS", instance.instance_id),
+                        *(([("CHECKS_AGAINST", candidate_class)]) if candidate_class in self.categories else []),
+                    ],
+                )
+
+            if instance.recognition_status == "accepted" and candidate_class in self.categories:
+                self.add_relation(RelationEdge(instance.instance_id, "CONFIRMED_AS", candidate_class))
+            if instance.recognition_status == "unknown":
+                self._ensure_unknown_sample(instance, detected)
+
+            if self._has_depth_update(detected):
+                depth_event = GraphEvent(
+                    event_type="DepthUpdateEvent",
+                    attributes={
+                        "center_xyz_camera": list(instance.center_xyz_camera),
+                        "depth_valid_ratio": instance.depth_valid_ratio,
+                        "observed_extent_3d": list(instance.observed_extent_3d),
+                        "occlusion_state": instance.occlusion_state,
+                    },
+                )
+                self._append_event(depth_event, [("IN_SCENE", scene_id), ("UPDATES", instance.instance_id)])
+
+        relation_hints = list(observation.relations)
+        relation_hints.extend(self._infer_near_relations(observation.objects))
+        for relation in relation_hints:
+            if relation.relation.lower() != "near":
+                continue
+            source_id = resolved_ids.get(relation.source_temp_id)
+            target_id = resolved_ids.get(relation.target_temp_id)
+            if source_id and target_id and source_id != target_id:
+                self.add_relation(RelationEdge(source_id, "NEAR", target_id))
+
         return {
             "frame_id": observation.frame_id,
+            "scene_id": scene_id,
             "created_instances": created,
             "updated_instances": updated,
             "resolved_ids": resolved_ids,
-            "relation_count": len(inferred_relations),
+            "relation_count": len([edge for edge in self.edges.values() if edge.relation == "NEAR"]),
         }
 
-    def mark_processed(self, instance_id: str, *, action: str, source: str = "executor") -> None:
+    def apply_human_review(
+        self,
+        target_id: str,
+        *,
+        review_action: str,
+        reason: str = "",
+        confirmed_category: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """应用文档列出的五种人工审核操作。"""
+
+        allowed = {"confirm_existing", "mark_unknown", "approve_robot", "forbid_robot", "discard_detection"}
+        if review_action not in allowed:
+            raise ValueError(f"Unsupported review_action: {review_action}")
+        event = GraphEvent("HumanReviewEvent", attributes={"review_action": review_action, "reason": reason})
+        relations = [("REVIEWS", target_id)]
+        instance = self.instances.get(target_id)
+        if instance is not None:
+            if review_action == "confirm_existing":
+                if not confirmed_category:
+                    raise ValueError("confirm_existing requires confirmed_category")
+                category = canonicalize_category_name(confirmed_category)
+                if category not in self.categories:
+                    raise ValueError(f"Unknown confirmed_category: {category}")
+                instance.class_name = category
+                instance.recognition_status = "accepted"
+                instance.current_handling_policy = self.categories[category].default_handling_policy
+                self.add_relation(RelationEdge(instance.instance_id, "CONFIRMED_AS", category))
+                relations.append(("CONFIRMS", category))
+            elif review_action == "mark_unknown":
+                instance.recognition_status = "unknown"
+                instance.current_handling_policy = "robot_forbidden"
+                self._ensure_unknown_sample(instance, None)
+            elif review_action == "approve_robot":
+                instance.current_handling_policy = "auto_allowed"
+            elif review_action == "forbid_robot":
+                instance.current_handling_policy = "robot_forbidden"
+            elif review_action == "discard_detection":
+                del self.instances[target_id]
+        self._append_event(event, relations)
+        return {"event_id": event.event_id, "target_id": target_id, "review_action": review_action}
+
+    def record_planning_event(self, scene_id: str, instance_id: str, *, planned_action: str, reason: str = "") -> GraphEvent:
+        allowed = {"robot_grasp", "request_human_review", "rescan", "no_action"}
+        if planned_action not in allowed:
+            raise ValueError(f"Unsupported planned_action: {planned_action}")
+        event = GraphEvent("PlanningEvent", attributes={"planned_action": planned_action, "reason": reason})
+        relations = [("IN_SCENE", scene_id)]
+        if instance_id:
+            relations.append(("SELECTS", instance_id))
+            if instance_id in self.instances:
+                self.instances[instance_id].task_status = "processing"
+        self._append_event(event, relations)
+        return event
+
+    def record_execution_event(
+        self,
+        scene_id: str,
+        instance_id: str,
+        *,
+        execution_result: str,
+        failure_reason: str = "",
+    ) -> GraphEvent:
+        if execution_result not in {"success", "failure"}:
+            raise ValueError("execution_result must be success or failure")
         instance = self.instances[instance_id]
-        before = instance.to_dict()
-        instance.processed_flag = True
-        instance.last_action = action
-        instance.task_status = "completed"
-        instance.priority = max(0, instance.priority - 1)
-        instance.touch(frame_id=instance.last_seen_frame, source=source)
-        self.events.append(
-            GraphEvent(
-                event_type="state_change",
-                subject_id=instance_id,
-                before_state=before,
-                after_state=instance.to_dict(),
-                source=source,
-            )
+        instance.attempt_count += 1
+        instance.task_status = "completed" if execution_result == "success" else "failed"
+        event = GraphEvent(
+            "ExecutionEvent",
+            attributes={"execution_result": execution_result, "failure_reason": failure_reason if execution_result == "failure" else ""},
         )
+        self._append_event(event, [("EXECUTES_ON", instance_id), ("IN_SCENE", scene_id)])
+        return event
+
+    def record_knowledge_evolution(
+        self,
+        target_id: str,
+        *,
+        evolution_action: str,
+        reason: str,
+        creates_category: Optional[CategorySpec] = None,
+    ) -> GraphEvent:
+        allowed = {"assign_existing_category", "create_unknown_cluster", "propose_new_category", "promote_new_category", "discard_unknown"}
+        if evolution_action not in allowed:
+            raise ValueError(f"Unsupported evolution_action: {evolution_action}")
+        event = GraphEvent("KnowledgeEvolutionEvent", attributes={"evolution_action": evolution_action, "reason": reason})
+        relations = [("UPDATES", target_id)]
+        if creates_category is not None:
+            if evolution_action != "promote_new_category":
+                raise ValueError("WasteCategory creation requires promote_new_category")
+            self.register_category(creates_category)
+            relations.append(("CREATES", creates_category.name))
+        self._append_event(event, relations)
+        return event
+
+    def create_unknown_cluster(
+        self,
+        cluster: UnknownCluster,
+        *,
+        member_sample_ids: Iterable[str] = (),
+    ) -> UnknownCluster:
+        members = [sample_id for sample_id in member_sample_ids if sample_id in self.unknown_samples]
+        cluster.member_count = len(members)
+        self.unknown_clusters[cluster.cluster_id] = cluster
+        for sample_id in members:
+            self.add_relation(RelationEdge(sample_id, "MEMBER_OF", cluster.cluster_id))
+        return cluster
+
+    def mark_processed(self, instance_id: str, *, action: str, source: str = "executor") -> None:
+        """兼容入口：按真实执行成功记录 ExecutionEvent。"""
+
+        instance = self.instances[instance_id]
+        scene_id = instance.last_seen_scene or next(reversed(self.scenes), "scene_unknown")
+        self.record_execution_event(scene_id, instance_id, execution_result="success")
 
     def list_active_instances(self) -> List[ObjectInstance]:
-        return [instance for instance in self.instances.values() if instance.task_status != "expired"]
+        return [instance for instance in self.instances.values() if instance.task_status != "completed"]
+
+    def resolve_instance_category(self, instance_id: str) -> str:
+        """优先读取 CONFIRMED_AS，其次读取 CANDIDATE_OF。"""
+
+        confirmed = [edge.target_id for edge in self.edges.values() if edge.source_id == instance_id and edge.relation == "CONFIRMED_AS"]
+        if confirmed:
+            return confirmed[-1]
+        candidates = [edge.target_id for edge in self.edges.values() if edge.source_id == instance_id and edge.relation == "CANDIDATE_OF"]
+        if candidates:
+            return candidates[-1]
+        instance = self.instances.get(instance_id)
+        return instance.class_name if instance is not None else UNKNOWN_CATEGORY
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            "categories": {name: self._category_to_dict(spec) for name, spec in self.categories.items()},
+            "categories": {name: spec.to_dict() for name, spec in self.categories.items()},
+            "scenes": {scene_id: scene.to_dict() for scene_id, scene in self.scenes.items()},
             "instances": {instance_id: instance.to_dict() for instance_id, instance in self.instances.items()},
+            "unknown_samples": {sample_id: sample.to_dict() for sample_id, sample in self.unknown_samples.items()},
+            "unknown_clusters": {cluster_id: cluster.to_dict() for cluster_id, cluster in self.unknown_clusters.items()},
             "edges": [edge.to_dict() for edge in self.edges.values()],
             "events": [event.to_dict() for event in self.events],
         }
 
-    def _category_to_dict(self, spec: CategorySpec) -> Dict[str, Any]:
-        return {
-            "name": spec.name,
-            "category": spec.category,
-            "material": spec.material,
-            "risk_level": spec.risk_level,
-            "fragility": spec.fragility,
-            "graspability": spec.graspability,
-            "pollution_level": spec.pollution_level,
-            "recognition_difficulty": spec.recognition_difficulty,
-            "handling_mode": spec.handling_mode,
-            "grasp_difficulty": spec.grasp_difficulty,
-            "needs_llm_review": spec.needs_llm_review,
-            "auto_processable": spec.auto_processable,
-            "recyclability": spec.recyclability,
-            "semantic_tags": list(spec.semantic_tags),
-            "visual_prototype": {key: list(values) for key, values in spec.visual_prototype.items()},
-            "confidence_prior": spec.confidence_prior,
-            "description": spec.description,
-            "source_refs": list(spec.source_refs),
-            "notes": spec.notes,
-        }
-
-    def _resolve_detection(self, detected: DetectedObject, frame_id: str, source: str) -> Tuple[ObjectInstance, bool]:
-        detected.class_name = canonicalize_category_name(detected.class_name)
-        if detected.temp_id in self._track_map:
-            instance_id = self._track_map[detected.temp_id]
-            existing = self.instances[instance_id]
-            return self._merge_detection(existing, detected, frame_id, source), False
-
-        candidate_id = self._match_existing(detected)
-        if candidate_id is None:
-            instance_id = self.generate_instance_id(detected.class_name)
-            return (
-                ObjectInstance(
-                    instance_id=instance_id,
-                    class_name=detected.class_name,
-                    center_xyz=detected.center_xyz,
-                    orientation=detected.orientation,
-                    bbox_3d=detected.bbox_3d,
-                    confidence=detected.confidence,
-                    yolo_confidence=detected.yolo_confidence,
-                    llm_confidence=detected.llm_confidence,
-                    final_confidence=detected.final_confidence or detected.confidence,
-                    review_status=detected.review_status,
-                    risk_level=detected.risk_level,
-                    mask_polygon=list(detected.mask_polygon),
-                    boundary_points=list(detected.boundary_points),
-                    visible_area_ratio=detected.visible_area_ratio,
-                    occlusion_state=detected.occlusion_state,
-                    grasp_candidates=list(detected.grasp_candidates),
-                    safe_grasp_score=detected.safe_grasp_score,
-                    fragility_level="unknown",
-                    graspability_level="unknown",
-                    pollution_level="unknown",
-                    task_status="active",
-                    observed_aliases=[detected.temp_id],
-                    last_seen_frame=frame_id,
-                    source=source,
-                    metadata=dict(detected.metadata),
-                    priority=self._infer_priority(detected),
-                ),
-                True,
-            )
-
-        existing = self.instances[candidate_id]
-        return self._merge_detection(existing, detected, frame_id, source), False
-
-    def _merge_detection(self, existing: ObjectInstance, detected: DetectedObject, frame_id: str, source: str) -> ObjectInstance:
-        # 短期记忆更新：保留旧状态，但用新观测覆盖位置、置信度和任务相关属性。
-        merged = replace(
-            existing,
-            class_name=detected.class_name or existing.class_name,
-            center_xyz=self._blend_vector(existing.center_xyz, detected.center_xyz),
-            orientation=detected.orientation or existing.orientation,
-            bbox_3d=detected.bbox_3d if detected.bbox_3d is not None else existing.bbox_3d,
-            confidence=max(existing.confidence, detected.confidence),
-            yolo_confidence=max(existing.yolo_confidence, detected.yolo_confidence),
-            llm_confidence=max(existing.llm_confidence, detected.llm_confidence),
-            final_confidence=max(existing.final_confidence, detected.final_confidence or detected.confidence),
-            review_status=detected.review_status if detected.review_status != "not_reviewed" else existing.review_status,
-            risk_level=detected.risk_level if detected.risk_level != "unknown" else existing.risk_level,
-            mask_polygon=list(detected.mask_polygon) or existing.mask_polygon,
-            boundary_points=list(detected.boundary_points) or existing.boundary_points,
-            visible_area_ratio=detected.visible_area_ratio,
-            occlusion_state=detected.occlusion_state if detected.occlusion_state != "unknown" else existing.occlusion_state,
-            grasp_candidates=list(detected.grasp_candidates) or existing.grasp_candidates,
-            safe_grasp_score=max(existing.safe_grasp_score, detected.safe_grasp_score),
-            task_status="active" if not existing.processed_flag else existing.task_status,
-            observed_aliases=list(sorted(set(existing.observed_aliases + [detected.temp_id]))),
-            last_seen_frame=frame_id,
-            priority=max(existing.priority, self._infer_priority(detected)),
-            task_relevance=max(existing.task_relevance, detected.confidence),
-            metadata={**existing.metadata, **detected.metadata},
-            source=source or existing.source,
-            fragility_level=existing.fragility_level,
-            graspability_level=existing.graspability_level,
-            pollution_level=existing.pollution_level,
-            handling_mode=existing.handling_mode,
-            grasp_difficulty=existing.grasp_difficulty,
+    def _resolve_detection(
+        self,
+        detected: DetectedObject,
+        candidate_class: str,
+        scene_id: str,
+    ) -> Tuple[ObjectInstance, bool]:
+        recognition_status = self._recognition_status(detected)
+        vlm_consistency = self._vlm_consistency(detected)
+        handling_policy = self._handling_policy(candidate_class, recognition_status)
+        if detected.temp_id in self._track_map and self._track_map[detected.temp_id] in self.instances:
+            existing = self.instances[self._track_map[detected.temp_id]]
+            return self._merge_detection(existing, detected, candidate_class, recognition_status, vlm_consistency, handling_policy, scene_id), False
+        candidate_id = self._match_existing(detected, candidate_class)
+        if candidate_id is not None:
+            return self._merge_detection(self.instances[candidate_id], detected, candidate_class, recognition_status, vlm_consistency, handling_policy, scene_id), False
+        instance = ObjectInstance(
+            instance_id=self.generate_instance_id(candidate_class if recognition_status != "unknown" else UNKNOWN_CATEGORY),
+            yolo_confidence=float(detected.yolo_confidence or detected.confidence),
+            recognition_status=recognition_status,
+            bbox_2d=detected.bbox_2d or self._bbox_from_metadata(detected.metadata),
+            mask_ref=detected.mask_ref or str(detected.metadata.get("mask_ref", "")),
+            crop_ref=detected.crop_ref or str(detected.metadata.get("crop_ref", "")),
+            center_xyz_camera=detected.center_xyz,
+            depth_valid_ratio=float(detected.depth_valid_ratio or detected.metadata.get("depth_valid_ratio", 0.0) or 0.0),
+            observed_extent_3d=detected.observed_extent_3d,
+            occlusion_state=self._normalize_occlusion(detected.occlusion_state),
+            vlm_consistency=vlm_consistency,
+            current_handling_policy=handling_policy,
+            task_status="pending",
+            attempt_count=0,
+            class_name=candidate_class,
+            last_seen_scene=scene_id,
         )
-        return merged
+        return instance, True
 
-    def _match_existing(self, detected: DetectedObject) -> Optional[str]:
+    def _merge_detection(
+        self,
+        existing: ObjectInstance,
+        detected: DetectedObject,
+        candidate_class: str,
+        recognition_status: str,
+        vlm_consistency: str,
+        handling_policy: str,
+        scene_id: str,
+    ) -> ObjectInstance:
+        return replace(
+            existing,
+            yolo_confidence=max(existing.yolo_confidence, float(detected.yolo_confidence or detected.confidence)),
+            recognition_status=recognition_status,
+            bbox_2d=detected.bbox_2d or self._bbox_from_metadata(detected.metadata) or existing.bbox_2d,
+            mask_ref=detected.mask_ref or str(detected.metadata.get("mask_ref", "")) or existing.mask_ref,
+            crop_ref=detected.crop_ref or str(detected.metadata.get("crop_ref", "")) or existing.crop_ref,
+            center_xyz_camera=self._blend_vector(existing.center_xyz_camera, detected.center_xyz),
+            depth_valid_ratio=float(detected.depth_valid_ratio or detected.metadata.get("depth_valid_ratio", 0.0) or existing.depth_valid_ratio),
+            observed_extent_3d=detected.observed_extent_3d if any(detected.observed_extent_3d) else existing.observed_extent_3d,
+            occlusion_state=self._normalize_occlusion(detected.occlusion_state) if detected.occlusion_state != "unknown" else existing.occlusion_state,
+            vlm_consistency=vlm_consistency if vlm_consistency != "not_checked" else existing.vlm_consistency,
+            current_handling_policy=handling_policy,
+            task_status="pending" if existing.task_status != "completed" else existing.task_status,
+            class_name=candidate_class,
+            last_seen_scene=scene_id,
+        )
+
+    def _candidate_class(self, detected: DetectedObject) -> str:
+        original = detected.metadata.get("original_yolo_class_name") or detected.metadata.get("candidate_class") or detected.class_name
+        return canonicalize_category_name(str(original))
+
+    def _recognition_status(self, detected: DetectedObject) -> str:
+        explicit = str(detected.metadata.get("recognition_status", "")).lower()
+        if explicit in {"accepted", "review_required", "unknown"}:
+            return explicit
+        decision = str(detected.metadata.get("review_decision", "")).lower()
+        if detected.class_name == UNKNOWN_CATEGORY or decision in {"unknown", "conflict"}:
+            return "unknown"
+        if bool(detected.metadata.get("need_human_review")) or decision in {"insufficient", "review_error", "uncertain"}:
+            return "review_required"
+        return "accepted"
+
+    def _vlm_consistency(self, detected: DetectedObject) -> str:
+        raw = str(detected.metadata.get("vlm_consistency_status") or detected.metadata.get("review_decision") or "not_checked").lower()
+        return raw if raw in {"support", "conflict"} else "not_checked"
+
+    def _handling_policy(self, candidate_class: str, recognition_status: str) -> str:
+        if recognition_status == "unknown":
+            return "robot_forbidden"
+        if recognition_status == "review_required":
+            return "human_review_required"
+        spec = self.categories.get(candidate_class)
+        return spec.default_handling_policy if spec is not None else "human_review_required"
+
+    def _ensure_unknown_sample(self, instance: ObjectInstance, detected: Optional[DetectedObject]) -> UnknownSample:
+        existing = [edge.target_id for edge in self.edges.values() if edge.source_id == instance.instance_id and edge.relation == "RECORDED_AS"]
+        if existing:
+            return self.unknown_samples[existing[-1]]
+        self._unknown_counter += 1
+        sample = UnknownSample(
+            sample_id=f"unknown_sample_{self._unknown_counter:03d}",
+            crop_ref=instance.crop_ref,
+            mask_ref=instance.mask_ref,
+            yolo_topk=dict((detected.metadata.get("yolo_topk") if detected else {}) or {instance.class_name: instance.yolo_confidence}),
+            vlm_attributes=dict((detected.metadata.get("visual_attributes") if detected else {}) or {}),
+        )
+        self.unknown_samples[sample.sample_id] = sample
+        self.add_relation(RelationEdge(instance.instance_id, "RECORDED_AS", sample.sample_id))
+        return sample
+
+    def _append_event(self, event: GraphEvent, relations: Iterable[Tuple[str, str]]) -> None:
+        self.events.append(event)
+        for relation, target_id in relations:
+            self.add_relation(RelationEdge(event.event_id, relation, target_id))
+
+    def _match_existing(self, detected: DetectedObject, candidate_class: str) -> Optional[str]:
         best_id: Optional[str] = None
         best_distance = float("inf")
         for instance in self.instances.values():
-            if instance.class_name != detected.class_name:
+            if self.resolve_instance_category(instance.instance_id) != candidate_class:
                 continue
-            # 只在同类别对象之间做空间匹配，避免把相邻的不同材料误合并。
-            distance = self._distance(instance.center_xyz, detected.center_xyz)
+            distance = self._distance(instance.center_xyz_camera, detected.center_xyz)
             if distance < best_distance:
                 best_distance = distance
                 best_id = instance.instance_id
-        if best_id is not None and best_distance <= self.match_distance_threshold:
-            return best_id
-        return None
+        return best_id if best_id is not None and best_distance <= self.match_distance_threshold else None
 
-    def _infer_priority(self, detected: DetectedObject) -> int:
-        score = 1
-        risk = (detected.risk_level or "").lower()
-        if risk in {"high", "critical", "dangerous", "hazardous"}:
-            score += 4
-        elif risk in {"medium"}:
-            score += 2
-        if detected.confidence >= 0.85:
-            score += 1
-        return score
-
-    def _update_category_from_instance(self, instance: ObjectInstance) -> None:
-        spec = self.categories.get(instance.class_name)
-        if spec is None:
-            return
-        # 长期知识层只提供稳定先验，不应该被一次观测完全改写。
-        # 这里做的是“先验 -> 实例”的投影，而不是反向覆盖类别知识。
-        instance.risk_level = instance.risk_level if instance.risk_level != "unknown" else spec.risk_level
-        instance.fragility_level = spec.fragility if instance.fragility_level == "unknown" else instance.fragility_level
-        instance.graspability_level = spec.graspability if instance.graspability_level == "unknown" else instance.graspability_level
-        instance.pollution_level = spec.pollution_level if instance.pollution_level == "unknown" else instance.pollution_level
-        instance.handling_mode = spec.handling_mode if instance.handling_mode == "human_review" else instance.handling_mode
-        instance.grasp_difficulty = spec.grasp_difficulty if instance.grasp_difficulty == "unknown" else instance.grasp_difficulty
-        instance.graspable = instance.graspability_level in {"medium", "high"}
-        instance.processable = (
-            instance.processable
-            and instance.graspable
-            and spec.auto_processable
-            and spec.handling_mode in {"robot_grasp", "robot_with_supervision"}
-            and spec.risk_level not in {"high", "critical", "hazardous"}
-        )
-        if spec.needs_llm_review and instance.confidence < 0.9:
-            instance.task_status = "needs_review"
-
-    def _infer_relations(self, detected_objects: Iterable[DetectedObject]) -> List[DetectedRelation]:
+    def _infer_near_relations(self, detected_objects: Iterable[DetectedObject]) -> List[DetectedRelation]:
         objects = list(detected_objects)
         relations: List[DetectedRelation] = []
-        for i, source in enumerate(objects):
-            for j, target in enumerate(objects):
-                if i == j:
-                    continue
-                dx = source.center_xyz[0] - target.center_xyz[0]
-                dy = source.center_xyz[1] - target.center_xyz[1]
-                dz = source.center_xyz[2] - target.center_xyz[2]
-                planar_distance = sqrt(dx * dx + dy * dy)
-                full_distance = sqrt(dx * dx + dy * dy + dz * dz)
-                # 当前推断只使用简单几何规则，后续 ROS2/RGB-D 接入时可替换为更严格的接触判断。
-                if planar_distance <= 0.12 and dz >= 0.03:
-                    relations.append(
-                        DetectedRelation(
-                            source_temp_id=source.temp_id,
-                            relation="on_top_of",
-                            target_temp_id=target.temp_id,
-                            confidence=min(source.confidence, target.confidence),
-                        )
-                    )
-                elif full_distance <= 0.08:
-                    relations.append(
-                        DetectedRelation(
-                            source_temp_id=source.temp_id,
-                            relation="touching",
-                            target_temp_id=target.temp_id,
-                            confidence=min(source.confidence, target.confidence),
-                        )
-                    )
-                elif full_distance <= 0.30:
-                    relations.append(
-                        DetectedRelation(
-                            source_temp_id=source.temp_id,
-                            relation="near",
-                            target_temp_id=target.temp_id,
-                            confidence=min(source.confidence, target.confidence) * 0.8,
-                        )
-                    )
+        for index, source in enumerate(objects):
+            for target in objects[index + 1 :]:
+                if self._distance(source.center_xyz, target.center_xyz) <= 0.30:
+                    relations.append(DetectedRelation(source.temp_id, "near", target.temp_id))
         return relations
 
-    def _refresh_instance_links(self, edge: RelationEdge) -> None:
-        source = self.instances.get(edge.source_id)
-        target = self.instances.get(edge.target_id)
-        if source is None or target is None:
-            return
-        # 关系边不仅是“连线”，还会反过来改变实例的可处理性和阻塞状态。
-        if edge.relation == "blocked_by":
-            if target.instance_id not in source.blocked_by:
-                source.blocked_by.append(target.instance_id)
-            source.processable = False
-        elif edge.relation == "supports":
-            if target.instance_id not in source.supports:
-                source.supports.append(target.instance_id)
-        elif edge.relation == "on_top_of":
-            source.support_state = "on_top_of"
-            target.support_state = "supporting"
-            if target.instance_id not in source.blocked_by:
-                source.blocked_by.append(target.instance_id)
-                source.processable = False
-        elif edge.relation == "touching":
-            source.contact_state = "touching"
-            target.contact_state = "touching"
-        elif edge.relation == "occluding":
-            source.occlusion_state = "occluding"
-            if target.instance_id not in source.blocked_by:
-                source.blocked_by.append(target.instance_id)
-        elif edge.relation == "requires_prior_action":
-            if target.instance_id not in source.blocked_by:
-                source.blocked_by.append(target.instance_id)
-                source.processable = False
+    @staticmethod
+    def _has_depth_update(detected: DetectedObject) -> bool:
+        return bool(
+            detected.depth_valid_ratio
+            or detected.metadata.get("depth_valid_ratio") is not None
+            or any(detected.center_xyz)
+            or any(detected.observed_extent_3d)
+        )
 
-    def _refresh_temporal_states(self) -> None:
-        now = max((event.timestamp for event in self.events), default=None)
-        if now is None:
-            return
-        stale_threshold = now - timedelta(seconds=self.stale_after_seconds)
-        for instance in self.instances.values():
-            # 长时间没有新观测的未处理对象不删除，只降级为弱记忆，供规划层谨慎使用。
-            if instance.updated_at < stale_threshold and not instance.processed_flag:
-                instance.task_status = "weak_memory"
+    @staticmethod
+    def _bbox_from_metadata(metadata: Dict[str, Any]) -> Optional[Tuple[float, float, float, float]]:
+        value = metadata.get("bbox_2d")
+        if isinstance(value, (list, tuple)) and len(value) == 4:
+            return tuple(float(item) for item in value)  # type: ignore[return-value]
+        return None
 
-    def _distance(self, a: Tuple[float, float, float], b: Tuple[float, float, float]) -> float:
-        dx = a[0] - b[0]
-        dy = a[1] - b[1]
-        dz = a[2] - b[2]
-        return sqrt(dx * dx + dy * dy + dz * dz)
+    @staticmethod
+    def _normalize_occlusion(value: str) -> str:
+        normalized = str(value or "unknown").lower()
+        return normalized if normalized in {"none", "partial", "unknown"} else "unknown"
 
-    def _blend_vector(self, a: Tuple[float, float, float], b: Tuple[float, float, float]) -> Tuple[float, float, float]:
-        return ((a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0, (a[2] + b[2]) / 2.0)
+    @staticmethod
+    def _distance(a: Tuple[float, float, float], b: Tuple[float, float, float]) -> float:
+        return sqrt(sum((left - right) ** 2 for left, right in zip(a, b)))
+
+    @staticmethod
+    def _blend_vector(a: Tuple[float, float, float], b: Tuple[float, float, float]) -> Tuple[float, float, float]:
+        return tuple((left + right) / 2.0 for left, right in zip(a, b))  # type: ignore[return-value]

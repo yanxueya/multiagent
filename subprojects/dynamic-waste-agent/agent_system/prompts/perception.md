@@ -1,5 +1,3 @@
-# perception_agent prompt placeholder
+# 已迁移
 
-职责：将检测、分割、VLM 和传感器结果整理为统一感知事件。
-
-禁止：自行训练模型、修改数据集、直接发送 ROS2 动作。
+请查看 $(System.Collections.DictionaryEntry.Value)。该文件仅保留为旧路径提示，避免把非 agent 组件误解为智能体。

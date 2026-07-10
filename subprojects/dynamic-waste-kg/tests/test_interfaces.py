@@ -1,4 +1,4 @@
-"""验证 test interfaces 相关功能。"""
+﻿"""验证 test interfaces 相关功能。"""
 
 import unittest
 
@@ -17,7 +17,7 @@ from wastekg import (
 
 
 class InterfaceTests(unittest.TestCase):
-    def test_vision_packet_prefers_llm_when_more_confident(self) -> None:
+    def test_vision_packet_routes_vlm_conflict_to_unknown_without_override(self) -> None:
         packet = VisionPacket(
             frame_id="frame_001",
             source="camera",
@@ -35,8 +35,10 @@ class InterfaceTests(unittest.TestCase):
         )
 
         obs = vision_packet_to_observation(packet)
-        self.assertEqual(obs.objects[0].class_name, "glass")
-        self.assertEqual(obs.objects[0].confidence, 0.86)
+        self.assertEqual(obs.objects[0].class_name, "brick")
+        self.assertEqual(obs.objects[0].confidence, 0.71)
+        self.assertEqual(obs.objects[0].metadata["review_status"], "review_conflict")
+        self.assertEqual(obs.objects[0].metadata["recognition_status"], "unknown")
 
     def test_unknown_llm_review_is_not_ignored_when_less_confident(self) -> None:
         packet = VisionPacket(
@@ -57,9 +59,10 @@ class InterfaceTests(unittest.TestCase):
 
         obs = vision_packet_to_observation(packet)
 
-        self.assertEqual(obs.objects[0].class_name, "unknown")
-        self.assertEqual(obs.objects[0].confidence, 0.75)
+        self.assertEqual(obs.objects[0].class_name, "gypsum_board")
+        self.assertEqual(obs.objects[0].confidence, 0.90)
         self.assertEqual(obs.objects[0].metadata["review_status"], "human_review_required")
+        self.assertEqual(obs.objects[0].metadata["recognition_status"], "unknown")
         self.assertEqual(obs.objects[0].metadata["yolo_confidence"], 0.90)
         self.assertEqual(obs.objects[0].metadata["llm_confidence"], 0.75)
 
@@ -138,20 +141,23 @@ class InterfaceTests(unittest.TestCase):
             ),
         )
         self.assertEqual(result["status"], "success")
-        self.assertTrue(graph.instances["brick_01"].processed_flag)
+        self.assertEqual(graph.instances["brick_01"].task_status, "completed")
+        self.assertEqual(graph.instances["brick_01"].attempt_count, 1)
 
-        blocked_action = build_ros2_action_command("pick", "glass_01")
+        blocked_action = build_ros2_action_command("pick", "brick_01")
         blocked_result = apply_execution_feedback(
             graph,
             ExecutionFeedback(
                 action_id=blocked_action.action_id,
-                target_instance_id="glass_01",
+                target_instance_id="brick_01",
                 status="failed",
                 message="grasp_failed",
             ),
         )
         self.assertEqual(blocked_result["status"], "failed")
-        self.assertGreaterEqual(len(graph.events), 1)
+        self.assertEqual(graph.instances["brick_01"].task_status, "failed")
+        self.assertEqual(graph.instances["brick_01"].attempt_count, 2)
+        self.assertEqual(graph.events[-1].event_type, "ExecutionEvent")
 
 
 if __name__ == "__main__":

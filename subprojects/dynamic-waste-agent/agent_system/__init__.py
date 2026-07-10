@@ -1,5 +1,11 @@
-"""初始化当前 Python 包。"""
+"""初始化 dynamic-waste-agent 包并提供轻量懒加载入口。"""
 
-from .graph import AGENT_ORDER, describe_graph
+__all__ = ["AGENT_ORDER", "COMPONENT_ORDER", "describe_graph"]
 
-__all__ = ["AGENT_ORDER", "describe_graph"]
+
+def __getattr__(name: str):
+    if name in __all__:
+        from . import graph
+
+        return getattr(graph, name)
+    raise AttributeError(f"module 'agent_system' has no attribute {name!r}")

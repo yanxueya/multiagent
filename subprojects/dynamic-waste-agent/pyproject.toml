@@ -1,9 +1,11 @@
 [project]
 name = "dynamic-waste-agent"
 version = "0.1.0"
-description = "Placeholder multi-agent orchestration layer for dynamic construction waste handling."
+description = "LangGraph multi-agent orchestration layer for dynamic construction waste handling."
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+  "langgraph>=1.2.8",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

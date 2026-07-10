@@ -1,4 +1,4 @@
-"""实现 OpenAI-compatible 大模型视觉复核器。"""
+﻿"""实现 OpenAI-compatible 大模型视觉复核器。"""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from wastekg.perception.pipeline import ReviewResult
-from wastekg.core.taxonomy import canonicalize_category_name
+from wastekg.core.taxonomy import UNKNOWN_CATEGORY, canonicalize_category_name
 
 DEFAULT_LLM_BASE_URL = "https://api.deepseek.com"
 DEFAULT_LLM_MODEL = "deepseek-ai/DeepSeek-V4-Pro"
@@ -232,17 +232,17 @@ class OpenAICompatibleReviewer:
         allowed = ", ".join(allowed_classes)
         visual_paths = _visual_evidence_paths(crop_or_image_ref)
         user_prompt = (
-            "请复核一个建筑废弃物目标的类别。"
-            "你只能从 allowed_classes 中选择 class_name，不能创造新类别。"
-            "如果存在未知材料、玻璃碎片、危险板材等安全风险，请保守标记 need_human_review=true。"
+            "你是建筑废弃物分拣系统的视觉属性抽取器和一致性校验器。"
+            "不要自由改写 YOLO 类别，也不要创造新类别。"
+            "请只判断视觉属性是否支持 YOLO 的类别假设；证据不足或冲突时要求人工复核。"
             "请只返回 JSON，不要解释。\n\n"
             f"allowed_classes: {allowed}\n"
             f"yolo_class_name: {canonicalize_category_name(yolo_class_name)}\n"
             f"yolo_confidence: {float(yolo_confidence):.4f}\n"
             f"crop_or_image_ref: {crop_or_image_ref!r}\n\n"
             "返回 JSON 格式："
-            '{"class_name": "...", "confidence": 0.0, "risk_hint": "low|medium|high|unknown", '
-            '"need_human_review": true, "reason": "..."}'
+            '{"visual_attributes": {"dominant_color": "unknown", "transparency": "unknown", "glossiness": "unknown", "surface_texture": "unknown", "edge_shape": "unknown", "shape_hint": "unknown", "contamination_hint": "unknown"}, '
+            '"hypothesis_check": {"yolo_top1": "...", "yolo_confidence": 0.0, "consistency_status": "support|insufficient|conflict", "vlm_consistency_score": 0.0, "possible_confusing_classes": [], "reason": ""}}'
         )
         user_content: Any = user_prompt
         if visual_paths:
@@ -258,11 +258,8 @@ class OpenAICompatibleReviewer:
                 f"yolo_class_name: {canonicalize_category_name(yolo_class_name)}\n"
                 f"yolo_confidence: {float(yolo_confidence):.4f}\n\n"
                 "返回 JSON 格式："
-                '{"decision": "agree|change|uncertain", "proposed_class": "...", "confidence": 0.0, '
-                '"requires_human_review": true, '
-                '"visual_attributes": {"color": "...", "transparency": "...", "gloss": "...", '
-                '"surface_texture": "...", "edge_shape": "...", "shape_cue": "..."}, '
-                '"consistency": "support|conflict|insufficient", "reason": "..."}'
+                '{"object_id": "obj_001", "visual_attributes": {"dominant_color": "gray|white|brown|red|black|transparent|mixed|unknown", "transparency": "transparent|translucent|opaque|unknown", "glossiness": "low|medium|high|metallic|unknown", "surface_texture": "rough|smooth|powdery|granular|fibrous|porous|wrinkled|layered|unknown", "edge_shape": "sharp|blunt|flat_broken|irregular_broken|torn|folded|unknown", "shape_hint": "block_like|thin_plate|sheet_like|film_like|irregular_chunk|rod_like|fragment|unknown", "contamination_hint": "none|dust|paint_residue|oil_like|soil|unknown"}, '
+                '"hypothesis_check": {"yolo_top1": "...", "yolo_confidence": 0.0, "consistency_status": "support|insufficient|conflict", "vlm_consistency_score": 0.0, "possible_confusing_classes": [], "reason": ""}}'
             )
             user_content = [{"type": "text", "text": visual_prompt}]
             user_content.extend(
@@ -329,8 +326,50 @@ class OpenAICompatibleReviewer:
         yolo_class = canonicalize_category_name(yolo_class_name)
         allowed = {canonicalize_category_name(item) for item in allowed_classes}
 
-        # The visual-review protocol is deliberately conservative: only an
-        # explicit, whitelisted ``change`` may alter the YOLO category.
+        if "hypothesis_check" in data:
+            check = data.get("hypothesis_check") or {}
+            status = str(check.get("consistency_status", "insufficient")).strip().lower()
+            score = _clamp_confidence(check.get("vlm_consistency_score"))
+            reason = str(check.get("reason", ""))
+            visual_attributes = data.get("visual_attributes") if isinstance(data.get("visual_attributes"), dict) else {}
+            if status == "support":
+                return ReviewResult(
+                    class_name=yolo_class,
+                    confidence=score,
+                    risk_hint="unknown",
+                    reason=reason,
+                    need_human_review=False,
+                    consistency_status="support",
+                    consistency_score=score,
+                    visual_attributes=visual_attributes,
+                    decision="support",
+                )
+            if status == "conflict":
+                return ReviewResult(
+                    class_name=UNKNOWN_CATEGORY,
+                    confidence=score,
+                    risk_hint="unknown",
+                    reason=reason or "VLM attributes conflict with the YOLO hypothesis.",
+                    need_human_review=True,
+                    consistency_status="conflict",
+                    consistency_score=score,
+                    visual_attributes=visual_attributes,
+                    decision="conflict",
+                )
+            return ReviewResult(
+                class_name=yolo_class,
+                confidence=score,
+                risk_hint="unknown",
+                reason=reason or "VLM evidence is insufficient for accepting the YOLO hypothesis.",
+                need_human_review=True,
+                consistency_status="insufficient",
+                consistency_score=score,
+                visual_attributes=visual_attributes,
+                decision="insufficient",
+            )
+
+        # Legacy response compatibility: VLM can agree, reject, or mark uncertain,
+        # but it must not directly replace the YOLO class with another class.
         if "decision" in data:
             decision = str(data.get("decision", "")).strip().lower()
             reason = str(data.get("reason", ""))
@@ -353,16 +392,22 @@ class OpenAICompatibleReviewer:
                     risk_hint="unknown",
                     reason=reason,
                     need_human_review=requires_human_review,
-                    decision="agree",
+                    consistency_status="support",
+                    consistency_score=_clamp_confidence(data.get("confidence")),
+                    visual_attributes=data.get("visual_attributes") if isinstance(data.get("visual_attributes"), dict) else {},
+                    decision="support",
                 )
             if decision == "change" and proposed_class in allowed:
                 return ReviewResult(
-                    class_name=proposed_class,
+                    class_name=UNKNOWN_CATEGORY,
                     confidence=_clamp_confidence(data.get("confidence")),
                     risk_hint="unknown",
-                    reason=reason,
-                    need_human_review=requires_human_review,
-                    decision="change",
+                    reason=reason or f"VLM proposed {proposed_class}; route to review instead of auto-changing class.",
+                    need_human_review=True,
+                    consistency_status="conflict",
+                    consistency_score=_clamp_confidence(data.get("confidence")),
+                    visual_attributes=data.get("visual_attributes") if isinstance(data.get("visual_attributes"), dict) else {},
+                    decision="conflict",
                 )
             return ReviewResult(
                 class_name=yolo_class,
@@ -373,20 +418,27 @@ class OpenAICompatibleReviewer:
                 decision="invalid",
             )
         class_name = canonicalize_category_name(str(data.get("class_name", "")))
-        if class_name not in set(allowed_classes):
+        confidence = _clamp_confidence(data.get("confidence"))
+        if class_name == yolo_class:
             return ReviewResult(
-                class_name=canonicalize_category_name(yolo_class_name),
-                confidence=0.0,
-                risk_hint="unknown",
-                reason=f"大模型返回了不在允许类别中的结果：{class_name}",
-                need_human_review=True,
+                class_name=yolo_class,
+                confidence=confidence,
+                risk_hint=str(data.get("risk_hint", "unknown")),
+                reason=str(data.get("reason", "")),
+                need_human_review=bool(data.get("need_human_review", False)),
+                consistency_status="support",
+                consistency_score=confidence,
+                decision="support",
             )
         return ReviewResult(
-            class_name=class_name,
-            confidence=_clamp_confidence(data.get("confidence")),
+            class_name=UNKNOWN_CATEGORY,
+            confidence=confidence,
             risk_hint=str(data.get("risk_hint", "unknown")),
-            reason=str(data.get("reason", "")),
-            need_human_review=bool(data.get("need_human_review", False)),
+            reason=str(data.get("reason", f"大模型返回 {class_name}，与 YOLO 假设 {yolo_class} 不一致，进入复核。")),
+            need_human_review=True,
+            consistency_status="conflict",
+            consistency_score=confidence,
+            decision="conflict",
         )
 
 

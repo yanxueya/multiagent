@@ -1,4 +1,4 @@
-"""定义知识图谱使用的核心数据模型。"""
+"""定义 Word 版知识图谱规范对应的核心节点、关系和事件模型。"""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from uuid import uuid4
 Vector3 = Tuple[float, float, float]
 Quaternion = Tuple[float, float, float, float]
 BBox3D = Tuple[float, float, float, float, float, float]
+BBox2D = Tuple[float, float, float, float]
 
 
 def _utc_now() -> datetime:
@@ -18,71 +19,56 @@ def _utc_now() -> datetime:
 
 @dataclass(slots=True)
 class CategorySpec:
-    """长期知识层中的类别先验。"""
+    """长期知识层 WasteCategory 节点；字段严格对应权威文档。"""
 
     name: str
-    category: str
-    material: str = ""
-    risk_level: str = "unknown"
-    fragility: str = "unknown"
-    graspability: str = "unknown"
-    pollution_level: str = "unknown"
-    recognition_difficulty: str = "unknown"
-    handling_mode: str = "human_review"
-    grasp_difficulty: str = "unknown"
-    needs_llm_review: bool = False
-    auto_processable: bool = True
-    recyclability: str = "unknown"
-    semantic_tags: List[str] = field(default_factory=list)
+    risk_level: str = "medium"
+    fragility: str = "low"
+    graspability_prior: str = "medium"
+    vlm_review_policy: str = "threshold_based"
+    default_handling_policy: str = "human_confirmation_required"
     visual_prototype: Dict[str, List[str]] = field(default_factory=dict)
-    confidence_prior: float = 0.0
-    description: str = ""
-    source_refs: List[str] = field(default_factory=list)
-    notes: str = ""
+
+    @property
+    def category_name(self) -> str:
+        return self.name
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            "name": self.name,
-            "category": self.category,
-            "material": self.material,
+            "category_name": self.name,
             "risk_level": self.risk_level,
             "fragility": self.fragility,
-            "graspability": self.graspability,
-            "pollution_level": self.pollution_level,
-            "recognition_difficulty": self.recognition_difficulty,
-            "handling_mode": self.handling_mode,
-            "grasp_difficulty": self.grasp_difficulty,
-            "needs_llm_review": self.needs_llm_review,
-            "auto_processable": self.auto_processable,
-            "recyclability": self.recyclability,
-            "semantic_tags": list(self.semantic_tags),
+            "graspability_prior": self.graspability_prior,
+            "vlm_review_policy": self.vlm_review_policy,
+            "default_handling_policy": self.default_handling_policy,
             "visual_prototype": {key: list(values) for key, values in self.visual_prototype.items()},
-            "confidence_prior": self.confidence_prior,
-            "description": self.description,
-            "source_refs": list(self.source_refs),
-            "notes": self.notes,
         }
 
 
 @dataclass(slots=True)
 class DetectedObject:
-    """单帧感知结果，进入图谱前的对象表示。"""
+    """进入 KG 前的感知记录；这些字段不等同于持久化节点属性。"""
 
     temp_id: str
     class_name: str
     confidence: float
-    center_xyz: Vector3 = (0.0, 0.0, 0.0)
-    orientation: Quaternion = (0.0, 0.0, 0.0, 1.0)
-    bbox_3d: Optional[BBox3D] = None
-    risk_level: str = "unknown"
     yolo_confidence: float = 0.0
+    bbox_2d: Optional[BBox2D] = None
+    mask_ref: str = ""
+    crop_ref: str = ""
+    center_xyz: Vector3 = (0.0, 0.0, 0.0)
+    observed_extent_3d: Vector3 = (0.0, 0.0, 0.0)
+    depth_valid_ratio: float = 0.0
+    occlusion_state: str = "unknown"
     llm_confidence: float = 0.0
     final_confidence: float = 0.0
     review_status: str = "not_reviewed"
+    orientation: Quaternion = (0.0, 0.0, 0.0, 1.0)
+    bbox_3d: Optional[BBox3D] = None
+    risk_level: str = "unknown"
     mask_polygon: List[Tuple[float, float]] = field(default_factory=list)
     boundary_points: List[Tuple[float, float]] = field(default_factory=list)
     visible_area_ratio: float = 1.0
-    occlusion_state: str = "unknown"
     grasp_candidates: List[Dict[str, Any]] = field(default_factory=list)
     safe_grasp_score: float = 0.0
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -90,7 +76,7 @@ class DetectedObject:
 
 @dataclass(slots=True)
 class DetectedRelation:
-    """单帧感知到的对象关系。"""
+    """单帧关系提示；KG 关系本身不保存独立属性。"""
 
     source_temp_id: str
     relation: str
@@ -101,7 +87,7 @@ class DetectedRelation:
 
 @dataclass(slots=True)
 class Observation:
-    """一次感知观测，包含对象、关系和相机状态。"""
+    """一次 RGB-D 场景观测。"""
 
     frame_id: str
     source: str
@@ -113,153 +99,187 @@ class Observation:
 
 
 @dataclass(slots=True)
-class ObjectInstance:
-    """短期记忆层中的物体实例，会随观测和执行反馈持续更新。"""
+class Scene:
+    """短期记忆中的一次场景观测节点。"""
 
-    instance_id: str
-    class_name: str
-    center_xyz: Vector3 = (0.0, 0.0, 0.0)
-    orientation: Quaternion = (0.0, 0.0, 0.0, 1.0)
-    bbox_3d: Optional[BBox3D] = None
-    confidence: float = 0.0
-    yolo_confidence: float = 0.0
-    llm_confidence: float = 0.0
-    final_confidence: float = 0.0
-    review_status: str = "not_reviewed"
-    priority: int = 0
-    processed_flag: bool = False
-    last_action: str = ""
-    task_status: str = "pending"
-    risk_level: str = "unknown"
-    fragility_level: str = "unknown"
-    graspability_level: str = "unknown"
-    pollution_level: str = "unknown"
-    handling_mode: str = "human_review"
-    grasp_difficulty: str = "unknown"
-    occlusion_state: str = "unknown"
-    contact_state: str = "unknown"
-    support_state: str = "unknown"
-    movable: bool = True
-    graspable: bool = True
-    processable: bool = True
-    mask_polygon: List[Tuple[float, float]] = field(default_factory=list)
-    boundary_points: List[Tuple[float, float]] = field(default_factory=list)
-    visible_area_ratio: float = 1.0
-    grasp_candidates: List[Dict[str, Any]] = field(default_factory=list)
-    safe_grasp_score: float = 0.0
-    blocked_by: List[str] = field(default_factory=list)
-    supports: List[str] = field(default_factory=list)
-    task_relevance: float = 0.0
-    observed_aliases: List[str] = field(default_factory=list)
-    observation_count: int = 0
-    created_at: datetime = field(default_factory=_utc_now)
-    updated_at: datetime = field(default_factory=_utc_now)
-    last_seen_frame: str = ""
-    source: str = ""
-    metadata: Dict[str, Any] = field(default_factory=dict)
-
-    def touch(self, *, frame_id: str, source: str) -> None:
-        self.updated_at = _utc_now()
-        self.last_seen_frame = frame_id
-        self.source = source
-        self.observation_count += 1
+    scene_id: str
+    captured_at: datetime = field(default_factory=_utc_now)
+    rgb_ref: str = ""
+    depth_ref: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            "instance_id": self.instance_id,
-            "class_name": self.class_name,
-            "center_xyz": self.center_xyz,
-            "orientation": self.orientation,
-            "bbox_3d": self.bbox_3d,
-            "confidence": self.confidence,
-            "yolo_confidence": self.yolo_confidence,
-            "llm_confidence": self.llm_confidence,
-            "final_confidence": self.final_confidence,
-            "review_status": self.review_status,
-            "priority": self.priority,
-            "processed_flag": self.processed_flag,
-            "last_action": self.last_action,
-            "task_status": self.task_status,
-            "risk_level": self.risk_level,
-            "fragility_level": self.fragility_level,
-            "graspability_level": self.graspability_level,
-            "pollution_level": self.pollution_level,
-            "handling_mode": self.handling_mode,
-            "grasp_difficulty": self.grasp_difficulty,
-            "occlusion_state": self.occlusion_state,
-            "contact_state": self.contact_state,
-            "support_state": self.support_state,
-            "movable": self.movable,
-            "graspable": self.graspable,
-            "processable": self.processable,
-            "mask_polygon": [list(point) for point in self.mask_polygon],
-            "boundary_points": [list(point) for point in self.boundary_points],
-            "visible_area_ratio": self.visible_area_ratio,
-            "grasp_candidates": list(self.grasp_candidates),
-            "safe_grasp_score": self.safe_grasp_score,
-            "blocked_by": list(self.blocked_by),
-            "supports": list(self.supports),
-            "task_relevance": self.task_relevance,
-            "observed_aliases": list(self.observed_aliases),
-            "observation_count": self.observation_count,
-            "created_at": self.created_at.isoformat(),
-            "updated_at": self.updated_at.isoformat(),
-            "last_seen_frame": self.last_seen_frame,
-            "source": self.source,
-            "metadata": dict(self.metadata),
+            "scene_id": self.scene_id,
+            "captured_at": self.captured_at.isoformat(),
+            "rgb_ref": self.rgb_ref,
+            "depth_ref": self.depth_ref,
         }
 
 
 @dataclass(slots=True)
+class ObjectInstance:
+    """短期 ObjectInstance 节点；类别仅通过关系持久化。"""
+
+    instance_id: str
+    yolo_confidence: float = 0.0
+    recognition_status: str = "review_required"
+    bbox_2d: Optional[BBox2D] = None
+    mask_ref: str = ""
+    crop_ref: str = ""
+    center_xyz_camera: Vector3 = (0.0, 0.0, 0.0)
+    depth_valid_ratio: float = 0.0
+    observed_extent_3d: Vector3 = (0.0, 0.0, 0.0)
+    occlusion_state: str = "unknown"
+    vlm_consistency: str = "not_checked"
+    current_handling_policy: str = "human_review_required"
+    task_status: str = "pending"
+    attempt_count: int = 0
+    # 仅用于内存匹配，不会出现在 to_dict、JSON 或 Neo4j 节点属性中。
+    class_name: str = field(default="", repr=False)
+    created_at: datetime = field(default_factory=_utc_now, repr=False)
+    updated_at: datetime = field(default_factory=_utc_now, repr=False)
+    last_seen_scene: str = field(default="", repr=False)
+
+    def touch(self, *, scene_id: str) -> None:
+        self.updated_at = _utc_now()
+        self.last_seen_scene = scene_id
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "instance_id": self.instance_id,
+            "yolo_confidence": self.yolo_confidence,
+            "recognition_status": self.recognition_status,
+            "bbox_2d": list(self.bbox_2d) if self.bbox_2d is not None else None,
+            "mask_ref": self.mask_ref,
+            "crop_ref": self.crop_ref,
+            "center_xyz_camera": list(self.center_xyz_camera),
+            "depth_valid_ratio": self.depth_valid_ratio,
+            "observed_extent_3d": list(self.observed_extent_3d),
+            "occlusion_state": self.occlusion_state,
+            "vlm_consistency": self.vlm_consistency,
+            "current_handling_policy": self.current_handling_policy,
+            "task_status": self.task_status,
+            "attempt_count": self.attempt_count,
+        }
+
+
+@dataclass(slots=True)
+class UnknownSample:
+    """无法可靠分类的单个未知样本。"""
+
+    sample_id: str
+    crop_ref: str = ""
+    mask_ref: str = ""
+    yolo_topk: Dict[str, float] = field(default_factory=dict)
+    vlm_attributes: Dict[str, Any] = field(default_factory=dict)
+    review_status: str = "pending"
+    human_label: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "sample_id": self.sample_id,
+            "crop_ref": self.crop_ref,
+            "mask_ref": self.mask_ref,
+            "yolo_topk": dict(self.yolo_topk),
+            "vlm_attributes": dict(self.vlm_attributes),
+            "review_status": self.review_status,
+            "human_label": self.human_label,
+        }
+
+
+@dataclass(slots=True)
+class UnknownCluster:
+    """多次出现的相似未知对象聚类。"""
+
+    cluster_id: str
+    member_count: int = 0
+    prototype_attributes: Dict[str, Any] = field(default_factory=dict)
+    representative_crop_ref: str = ""
+    review_status: str = "pending"
+    candidate_category_name: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "cluster_id": self.cluster_id,
+            "member_count": self.member_count,
+            "prototype_attributes": dict(self.prototype_attributes),
+            "representative_crop_ref": self.representative_crop_ref,
+            "review_status": self.review_status,
+            "candidate_category_name": self.candidate_category_name,
+        }
+
+
+@dataclass(slots=True, frozen=True)
 class RelationEdge:
+    """无独立属性的图关系。"""
+
     source_id: str
     relation: str
     target_id: str
-    confidence: float = 1.0
-    active: bool = True
-    created_at: datetime = field(default_factory=_utc_now)
-    updated_at: datetime = field(default_factory=_utc_now)
-    metadata: Dict[str, Any] = field(default_factory=dict)
 
     def key(self) -> Tuple[str, str, str]:
         return self.source_id, self.relation, self.target_id
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
-            "source_id": self.source_id,
-            "relation": self.relation,
-            "target_id": self.target_id,
-            "confidence": self.confidence,
-            "active": self.active,
-            "created_at": self.created_at.isoformat(),
-            "updated_at": self.updated_at.isoformat(),
-            "metadata": dict(self.metadata),
-        }
+        return {"source_id": self.source_id, "relation": self.relation, "target_id": self.target_id}
+
+
+EVENT_SOURCES = {
+    "DetectionEvent": "yolo_detector",
+    "VLMReviewEvent": "vlm_service",
+    "DepthUpdateEvent": "depth_processor",
+    "HumanReviewEvent": "human_reviewer",
+    "PlanningEvent": "task_planner",
+    "ExecutionEvent": "robot_controller",
+    "KnowledgeEvolutionEvent": "knowledge_updater",
+}
+
+EVENT_ATTRIBUTE_FIELDS = {
+    "DetectionEvent": {"yolo_confidence", "bbox_2d", "mask_ref", "crop_ref"},
+    "VLMReviewEvent": {"image_quality", "visual_attributes", "consistency", "reason"},
+    "DepthUpdateEvent": {"center_xyz_camera", "depth_valid_ratio", "observed_extent_3d", "occlusion_state"},
+    "HumanReviewEvent": {"review_action", "reason"},
+    "PlanningEvent": {"planned_action", "reason"},
+    "ExecutionEvent": {"execution_result", "failure_reason"},
+    "KnowledgeEvolutionEvent": {"evolution_action", "reason"},
+}
 
 
 @dataclass(slots=True)
 class GraphEvent:
+    """七类事件节点的统一容器，字段集合由事件类型严格约束。"""
+
     event_type: str
-    subject_id: str = ""
-    relation: str = ""
-    before_state: Dict[str, Any] = field(default_factory=dict)
-    after_state: Dict[str, Any] = field(default_factory=dict)
-    source: str = ""
-    timestamp: datetime = field(default_factory=_utc_now)
-    confidence_delta: float = 0.0
+    event_source: str = ""
+    attributes: Dict[str, Any] = field(default_factory=dict)
+    event_time: datetime = field(default_factory=_utc_now)
     event_id: str = field(default_factory=lambda: f"evt_{uuid4().hex[:12]}")
-    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if self.event_type not in EVENT_SOURCES:
+            raise ValueError(f"Unsupported event_type: {self.event_type}")
+        expected_source = EVENT_SOURCES[self.event_type]
+        if not self.event_source:
+            self.event_source = expected_source
+        if self.event_source != expected_source:
+            raise ValueError(f"{self.event_type} must use event_source={expected_source}")
+        unsupported = set(self.attributes) - EVENT_ATTRIBUTE_FIELDS[self.event_type]
+        if unsupported:
+            raise ValueError(f"Unsupported {self.event_type} attributes: {sorted(unsupported)}")
+
+    @property
+    def timestamp(self) -> datetime:
+        return self.event_time
+
+    @property
+    def source(self) -> str:
+        return self.event_source
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "event_id": self.event_id,
             "event_type": self.event_type,
-            "subject_id": self.subject_id,
-            "relation": self.relation,
-            "before_state": dict(self.before_state),
-            "after_state": dict(self.after_state),
-            "source": self.source,
-            "timestamp": self.timestamp.isoformat(),
-            "confidence_delta": self.confidence_delta,
-            "metadata": dict(self.metadata),
+            "event_time": self.event_time.isoformat(),
+            "event_source": self.event_source,
+            **dict(self.attributes),
         }

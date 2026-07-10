@@ -25,7 +25,7 @@ class UpdateTests(unittest.TestCase):
 
         self.assertEqual(summary["created_instances"], ["brick_01"])
         self.assertIn("brick_01", graph.instances)
-        self.assertEqual(graph.instances["brick_01"].class_name, "brick")
+        self.assertEqual(graph.resolve_instance_category("brick_01"), "brick")
 
     def test_apply_observation_updates_relations(self) -> None:
         graph = KnowledgeGraph()
@@ -37,13 +37,13 @@ class UpdateTests(unittest.TestCase):
                 DetectedObject(temp_id="b", class_name="paint_can", confidence=0.93, center_xyz=(0.0, 0.0, 0.10), risk_level="high"),
             ],
             relations=[
-                DetectedRelation(source_temp_id="b", relation="on_top_of", target_temp_id="a", confidence=0.9)
+                DetectedRelation(source_temp_id="b", relation="near", target_temp_id="a", confidence=0.9)
             ],
         )
         graph.apply_observation(obs)
 
-        self.assertTrue(any(edge.relation == "on_top_of" for edge in graph.edges.values()))
-        self.assertTrue(graph.instances["paint_can_01"].blocked_by)
+        self.assertTrue(any(edge.relation == "NEAR" for edge in graph.edges.values()))
+        self.assertEqual(set(next(edge for edge in graph.edges.values() if edge.relation == "NEAR").to_dict()), {"source_id", "relation", "target_id"})
 
 
 if __name__ == "__main__":

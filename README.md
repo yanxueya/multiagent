@@ -1,6 +1,6 @@
-# multiagent 工作区
+﻿# multiagent 工作区
 
-这是一个多智能体与动态建筑废弃物知识图谱研究工作区。当前已经实现的核心子项目是 `subprojects/dynamic-waste-kg`，其余子项目是为了后续接入 LangChain/LangGraph 多智能体、ROS2、前端和仿真而建立的占位结构。
+这是一个多智能体与动态建筑废弃物知识图谱研究工作区。当前已实现知识图谱核心、LangGraph 4-agent 编排和前端工作台原型；ROS2 真实桥接、机械臂闭环和仿真仍待接入。
 
 ## 推荐阅读顺序
 
@@ -24,18 +24,30 @@ multiagent/
     dynamic-waste-kg/               # 已实现：知识图谱、数据处理、感知流水线、论文实验
       wastekg/                      # 按 core/data/yolo/llm/perception/rgbd/graph/interfaces/paper 分层
       scripts/                      # 按 data/yolo/llm/rgbd/graph/paper/tools 分类的命令行入口
-    dynamic-waste-agent/            # 占位：LangChain/LangGraph 多智能体编排层
+    dynamic-waste-agent/            # 已实现：LangGraph 4-agent 编排层
     dynamic-waste-ros2/             # 占位：ROS2 工作区与机器人桥接层
-    dynamic-waste-ui/               # 占位：前端/人工复核/监控界面
+    dynamic-waste-ui/               # 已实现原型：前端/人工复核/监控界面
     dynamic-waste-sim/              # 占位：仿真、数字孪生、离线回放
 ```
 
+
+## 决策逻辑
+
+本项目把知识事实和规划期决策严格分开：
+
+```text
+知识图谱 graph_state：提供类别先验、实例状态和当前可行性
+行动规划智能体：动态计算优先级，决定先后顺序和失败恢复
+```
+
+知识图谱维护长期类别属性、短期实例、关系和追加式事件。处理优先级与评分不保存到知识图谱；规划器先用 `graph_state` 排除当前不可执行对象，再根据任务目标、YOLO 证据、处理权限和 `attempt_count` 计算动态优先级，生成动作顺序与失败恢复策略。
 ## 分层关系
 
 ```text
 dynamic-waste-ui
   -> dynamic-waste-agent
-      -> dynamic-waste-kg
+      -> action_planning_agent
+      -> dynamic-waste-kg graph_state
       -> dynamic-waste-ros2
           -> robot / sensors
       -> dynamic-waste-sim

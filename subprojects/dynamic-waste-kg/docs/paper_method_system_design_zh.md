@@ -1,4 +1,6 @@
-# 复杂动态建筑环境中的危险废弃物认知与人机协同自治决策：方法设计、实现过程与阶段性实验记录
+﻿# 复杂动态建筑环境中的危险废弃物认知与人机协同自治决策：方法设计、实现过程与阶段性实验记录
+
+> 状态说明：本文是论文写作补充材料，不是当前系统字段或接口规范。知识图谱节点、关系、事件和规划边界必须以 [knowledge_seed_zh.md](knowledge_seed_zh.md)、当前代码和测试为准；本文中的历史字段仅用于追溯原型演进。
 
 > 本文档用于支撑后续科研论文写作，重点沉淀系统总体逻辑、数据与模型训练、双层动态知识图谱构建、YOLO 与大模型复核接入、Neo4j 可视化、以及面向后续 RealSense、LangGraph 和 ROS2 抓取规划的接口设计。  
 > 当前内容属于“方法与原型验证阶段”记录，适合后续扩展为论文的 Methodology、System Architecture、Prototype Implementation、Experimental Setup 和 Preliminary Results 部分。
@@ -630,9 +632,9 @@ LLM_MAX_TOKENS=400
 当前复核策略由 `PerceptionPolicy` 控制：
 
 ```text
-YOLO conf >= 0.85：采用 YOLO 类别假设，但仍受 KG 处理规则约束
-0.40 <= YOLO conf < 0.85：触发 VLM 属性一致性校验
-YOLO conf < 0.40：不强行分类，进入 unknown/人工复核
+YOLO conf >= 0.75 且非强复核类别：保留为已知候选，但仍受 KG 处理规则约束
+0.30 <= YOLO conf < 0.75：触发 VLM 属性一致性校验
+0.05 <= YOLO conf < 0.30：不接受类别，进入 unknown/人工复核；YOLO conf < 0.05 不进入候选池
 VLM 与 YOLO 假设冲突或证据不足：进入 uncertain/unknown
 ```
 

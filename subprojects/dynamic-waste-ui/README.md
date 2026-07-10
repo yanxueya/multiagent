@@ -1,18 +1,75 @@
 # dynamic-waste-ui
 
-这是后续前端或可视化控制台的占位子项目。
+`dynamic-waste-ui` 是建筑废弃物机器人分拣系统的人工复核、状态监控、知识图谱可视化、LangGraph trace 和后续仿真接入界面子项目。
 
-当前状态：结构占位，尚未选择技术栈。若后续使用 Node.js，建议优先考虑轻量仪表盘，而不是营销式页面。
+当前状态：已有 Vite + React + TypeScript 工作台原型。UI 已接入 `dynamic-waste-kg` 导出的 JSON snapshot；LangGraph trace、仿真和 ROS2 bridge 仍是前端预览/占位数据，尚未连接真实后端服务或真实硬件。
 
-## 预期功能
+## 已实现原型
 
-- 查看感知结果、KG 解释、风险等级和任务计划。
-- 显示机器人执行状态与异常。
-- 支持人工确认高风险动作。
-- 查看离线实验或仿真回放。
+- LangGraph Trace：以接近 LangSmith 的 run tree / nested span / timeline 形式展示 `4 个真正 agent + 非 agent 组件`。
+- 4 个真正 agent：`supervisor_agent`、`perception_agent`、`action_planning_agent`、`execution_agent`。
+- 非 agent 组件：`kg_state_projection`、`risk_gate`、`human_control_gate`、`ros2_bridge`、`feedback_update`。
+- Knowledge Graph State：从 `/data/kg-snapshot.json` 读取 KG 快照，展示长期知识层、短期实例层、事件日志层和 graph_state 谓词。
+- Human Review Queue：根据 KG 实例状态派生高风险、unknown、VLM 冲突和需要人工复核的对象。
+- Simulation / Digital Twin：预留 D435i、PiPER/机械臂、mask、bbox 和回放时间轴位置。
+- ROS2 Bridge Preview：只展示结构化命令预览，不直接控制硬件。
+- 左侧导航：Overview、Agent Trace、Simulation、Knowledge Graph、Human Review、ROS2 Bridge、Dataset 可以切换工作区。
 
-## 边界
+## 如何运行
 
-- 不在前端中实现核心 KG 推理。
-- 不直接控制 ROS2 硬件节点。
-- 通过后端 API 或 agent bridge 获取状态。
+PowerShell 中建议使用 `npm.cmd`，避免 Windows 执行策略拦截 `npm.ps1`。
+
+```powershell
+cd C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-ui
+npm.cmd install --cache .npm-cache
+npm.cmd run dev -- --port 5173
+```
+
+打开：
+
+```text
+http://127.0.0.1:5173/
+```
+
+## 刷新知识图谱快照
+
+UI 默认读取：
+
+```text
+subprojects/dynamic-waste-ui/public/data/kg-snapshot.json
+```
+
+由 KG 子项目导出：
+
+```powershell
+cd C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg
+.\.venv\Scripts\python.exe scripts\graph\export_ui_snapshot.py --output ..\dynamic-waste-ui\public\data\kg-snapshot.json
+```
+
+注意：`unknown` 不会作为长期类别导出；它只作为短期实例状态进入 UI。
+
+## 如何测试和构建
+
+```powershell
+cd C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-ui
+npm.cmd test -- --run
+npm.cmd run build
+```
+
+## 当前接入状态
+
+```text
+KG：已接入 JSON snapshot 文件；尚未接 live API。
+LangGraph：UI trace 已按 4-agent + components 的新架构展示，但仍是前端预览数据。
+ROS2：UI 只做结构化命令预览；dynamic-waste-ros2 bridge 尚未接入真实执行。
+Simulation：当前是占位/回放界面，等待后续接仿真环境。
+```
+
+## 工程边界
+
+- 前端不实现核心知识图谱推理，只展示 KG 或 agent bridge 输出的结构化状态。
+- 前端不直接控制 ROS2 硬件节点，只提交经过门控确认的结构化命令请求。
+- 高风险类别、低置信度候选、unknown 状态和 VLM 冲突对象必须进入人工复核。
+- `KG state`、`risk_gate`、`human_control_gate` 在 UI 中显示为组件或门控，不显示为 agent。
+- UI 不展示 `task_value` 或独立价值函数节点；规划优先级只显示为 `action_planning_agent` 的动态计算结果。
+- 涉及模型训练时，界面可以展示操作指令和显存检查提示，但不在沙盒中启动训练。

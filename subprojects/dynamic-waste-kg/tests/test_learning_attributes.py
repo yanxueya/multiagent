@@ -1,72 +1,35 @@
-"""验证 test learning attributes 相关功能。"""
+"""验证类别关系、处理权限和真实执行计数。"""
 
 import unittest
 
-from wastekg.core.models import CategorySpec, DetectedObject, Observation
+from wastekg import seed_default_categories
+from wastekg.core.models import DetectedObject, Observation
 from wastekg.graph.store import KnowledgeGraph
 
 
 class LearningAttributeTests(unittest.TestCase):
-    def test_category_attributes_feed_instance_attributes(self) -> None:
+    def test_category_is_relation_not_instance_property(self) -> None:
         graph = KnowledgeGraph()
-        graph.register_category(
-            CategorySpec(
-                name="glass",
-                category="building_waste",
-                material="silicate",
-                risk_level="medium",
-                graspability="low",
-                auto_processable=False,
-            )
-        )
-
-        graph.apply_observation(
-            Observation(
-                frame_id="frame_001",
-                source="realsense",
-                objects=[
-                    DetectedObject(
-                        temp_id="t1",
-                        class_name="glass",
-                        confidence=0.95,
-                        center_xyz=(0.1, 0.1, 0.1),
-                        risk_level="unknown",
-                    )
-                ],
-            )
-        )
+        seed_default_categories(graph)
+        graph.apply_observation(Observation(frame_id="scene_001", source="camera", objects=[DetectedObject("d1", "glass", 0.95)]))
 
         instance = graph.instances["glass_01"]
-        self.assertEqual(instance.risk_level, "medium")
-        self.assertFalse(instance.graspable)
-        self.assertFalse(instance.processable)
-        self.assertEqual(graph.categories["glass"].material, "silicate")
+        self.assertNotIn("class_name", instance.to_dict())
+        self.assertEqual(graph.resolve_instance_category(instance.instance_id), "glass")
+        self.assertIn(("glass_01", "CANDIDATE_OF", "glass"), graph.edges)
+        self.assertEqual(instance.current_handling_policy, "human_confirmation_required")
 
-    def test_mark_processed_updates_task_status_and_events(self) -> None:
+    def test_execution_event_increments_attempt_count_for_real_action(self) -> None:
         graph = KnowledgeGraph()
-        graph.apply_observation(
-            Observation(
-                frame_id="frame_001",
-                source="realsense",
-                objects=[
-                    DetectedObject(
-                        temp_id="t1",
-                        class_name="brick",
-                        confidence=0.9,
-                        center_xyz=(0.0, 0.0, 0.0),
-                    )
-                ],
-            )
-        )
+        seed_default_categories(graph)
+        graph.apply_observation(Observation(frame_id="scene_001", source="camera", objects=[DetectedObject("d1", "brick", 0.95)]))
+        before = graph.instances["brick_01"].attempt_count
+        graph.record_execution_event("scene_001", "brick_01", execution_result="failure", failure_reason="grasp_failed")
 
-        before_events = len(graph.events)
-        graph.mark_processed("brick_01", action="removed")
         instance = graph.instances["brick_01"]
-
-        self.assertTrue(instance.processed_flag)
-        self.assertEqual(instance.task_status, "completed")
-        self.assertEqual(instance.last_action, "removed")
-        self.assertGreater(len(graph.events), before_events)
+        self.assertEqual(instance.attempt_count, before + 1)
+        self.assertEqual(instance.task_status, "failed")
+        self.assertEqual(graph.events[-1].event_type, "ExecutionEvent")
 
 
 if __name__ == "__main__":

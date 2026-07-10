@@ -1,8 +1,7 @@
-"""定义 planning agent 多智能体占位逻辑。"""
+"""兼容旧名称；新代码应使用 action_planning_agent。"""
 
-def describe_planning_agent() -> dict[str, str]:
-    return {
-        "name": "planning_agent",
-        "role": "turn task goals and constraints into candidate robot plans",
-        "status": "placeholder",
-    }
+from .action_planning_agent import describe_action_planning_agent
+
+
+def describe_planning_agent() -> dict[str, object]:
+    return describe_action_planning_agent()

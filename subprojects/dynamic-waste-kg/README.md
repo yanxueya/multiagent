@@ -1,6 +1,6 @@
 # Dynamic Waste Knowledge Graph
 
-本子项目是动态建筑废弃物系统的知识图谱与世界模型层。它负责数据处理、感知结果接入、知识状态维护、VLM/LLM 复核、RGB-D 辅助、图谱导出和面向未来多智能体/ROS2 的结构化接口。
+本子项目是动态建筑废弃物系统的知识图谱状态层。它负责数据处理、感知结果接入、知识状态维护、VLM/LLM 复核、RGB-D 辅助、图谱导出和面向多智能体/ROS2 的结构化接口。
 
 当前稳定设计：
 
@@ -9,6 +9,8 @@
 ```
 
 YOLO 负责检测和实例分割明确类别；VLM/LLM 只做结构化视觉属性复核和一致性判断；知识图谱负责长期类别先验、短期实例状态、`unknown` 复核入口、事件日志和规划接口。
+
+知识图谱的规划接口输出 `graph_state`，包括 `recognition_status`、`current_handling_policy`、`task_status`、`attempt_count`、深度与遮挡状态、类别风险先验和派生可行性。知识图谱不保存优先级、评分或动作顺序；规划器必须先检查可行性和风险门控，再在规划期动态计算顺序。
 
 ## 快速入口
 
@@ -59,7 +61,7 @@ dynamic-waste-kg/
 - 事件日志。
 - YOLO/RealSense/VLM 到图谱的输入适配。
 - Neo4j 导出和可视化。
-- 给 LangGraph 和 ROS2 输出规划状态。
+- 给 LangGraph 输出 `graph_state`，供风险门控、操作序列规划器和 ROS2 桥接层使用。
 
 `dynamic-waste-kg` 不负责：
 
@@ -68,6 +70,24 @@ dynamic-waste-kg/
 - MoveIt 运动规划实现。
 - 最终 UI。
 - 完整机器人安全系统。
+
+
+## 导出到 UI
+
+`dynamic-waste-ui` 当前通过 JSON snapshot 接入知识图谱状态。刷新 UI 数据时运行：
+
+```powershell
+cd C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg
+.\.venv\Scripts\python.exe scripts\graph\export_ui_snapshot.py --output ..\dynamic-waste-ui\public\data\kg-snapshot.json
+```
+
+若已有真实 `KnowledgeGraph.to_dict()` 快照，可使用：
+
+```powershell
+.\.venv\Scripts\python.exe scripts\graph\export_ui_snapshot.py --input artifacts\graph_snapshot.json --output ..\dynamic-waste-ui\public\data\kg-snapshot.json
+```
+
+该导出会压缩为 UI 需要的关键字段，并确保 `unknown` 只作为短期实例状态，不作为长期类别知识。
 
 ## 运行测试
 

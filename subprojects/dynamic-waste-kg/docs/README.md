@@ -10,8 +10,7 @@
 
 优先阅读：
 
-- [长期知识层种子说明](knowledge_seed_zh.md)
-- [论文方法与系统设计沉淀文档](paper_method_system_design_zh.md)
+- [知识图谱权威设计](knowledge_seed_zh.md)
 - [YOLO + 大模型接入指南](yolo_llm_integration_zh.md)
 - [通用大模型复核器配置说明](llm_reviewer_config_zh.md)
 - [RealSense RGB-D 接入知识图谱教程](realsense_rgbd_pipeline_zh.md)
@@ -46,6 +45,7 @@
 用于理解训练数据、合并过程和模型结果：
 
 - [数据集处理与感知流水线](dataset_and_perception_pipeline_zh.md)
+- [当前 YOLO 模型训练结果图文说明](current_yolo_training_results_zh.md)
 - [Glass Debris 数据合并记录](../datasets/docs/glass_debris_dataset_merge_zh.md)
 - [2026.6.15 建筑垃圾数据合并记录](../datasets/docs/cdw2026_dataset_merge_and_asbestos_strategy_zh.md)
 - [YOLO 训练结果解读与优化方案](../datasets/docs/training_records/yolo_training_result_analysis_zh.md)
@@ -88,7 +88,7 @@ paper_experiments/
 
 - [期刊论文格式中文草稿](../paper_experiments/docs/journal_manuscript_draft_zh.md)
 - [小论文进一步完善稿 v5：当前推荐主稿](../paper_experiments/docs/小论文进一步完善稿_任务状态构建_YOLO_VLM_DKG_unknown_2026-07-01.md)
-- [论文方法与系统设计沉淀文档](paper_method_system_design_zh.md)
+- [论文方法与系统设计沉淀文档（补充写作材料，非系统规范）](paper_method_system_design_zh.md)
 
 ---
 

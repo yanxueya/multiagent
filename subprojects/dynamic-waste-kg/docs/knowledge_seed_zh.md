@@ -1,354 +1,280 @@
-# 长期知识层种子说明
+# 建筑废弃物知识图谱权威设计
 
-本文档说明当前知识图谱长期知识层的稳定版本。它必须与代码中的 `wastekg/core/knowledge_base.py` 保持一致，是后续 YOLO、VLM 属性一致性校验、LangGraph 多智能体规划和 ROS2 执行约束共同使用的基础。
+本文档同步自用户提供的《知识图谱.docx》，是当前代码、测试、UI 快照和多智能体接口的知识图谱依据。历史论文稿或实验记录与本文冲突时，以当前代码、测试和本文为准。
 
----
+## 1. 系统边界
 
-## 1. 当前结论
-
-当前系统采用：
+知识图谱服务于以下闭环：
 
 ```text
-11 个明确视觉类别 + 系统逻辑生成 unknown
+YOLO 候选检测
+  -> VLM 属性复核
+  -> RealSense 三维状态补充
+  -> 知识图谱更新
+  -> LangGraph 规划
+  -> ROS2 / PiPER 执行
+  -> 事件回写与重新观测
 ```
 
-其中 11 个明确类别用于 YOLO 训练、图谱长期知识和规划规则；`unknown` 不作为 YOLO 训练类别，而是系统在低置信度、证据冲突或无法可靠归类时生成的短期状态和人工复核入口。
-
-这样做的原因是：未知物体没有稳定统一的视觉外观，强行把 `unknown` 当成 YOLO 类训练会污染分类边界。更合理的做法是让 YOLO 学习明确类别，让知识图谱和复核策略承接“不确定对象”。
-
----
-
-## 2. 默认长期类别
-
-当前默认长期知识层只保留 11 个明确类别：
+当前固定为 11 个长期视觉类别：
 
 ```text
-concrete
-brick
-tile
-wood
-gypsum_board
-foam
-metal
-soft_plastic
-hard_plastic
-paperboard
-glass
+concrete, brick, tile, wood, gypsum_board, foam,
+metal, soft_plastic, hard_plastic, paperboard, glass
 ```
 
-`asbestos_suspect` 不再作为默认训练类别或默认长期类别。原因是当前缺少可靠、可验证、可规模化复用的疑似石棉视觉标注数据；RGB 图像也不能可靠确认石棉。后续若确有石棉相关专业数据，应作为高风险人工复核分支或扩展类别单独设计，而不是在当前原型中默认声明可识别。
+`unknown` 不是 YOLO 类别，也不是 `WasteCategory`。它是短期识别状态，并通过 `UnknownSample` 和 `UnknownCluster` 进入人工复核与知识演化流程。
 
-`unknown` 的定位如下：
+## 2. 三层结构
+
+| 层级 | 节点 | 职责 |
+| --- | --- | --- |
+| 长期知识层 | `WasteCategory` | 保存稳定类别先验和默认处理策略 |
+| 短期记忆层 | `Scene`、`ObjectInstance`、`UnknownSample`、`UnknownCluster` | 保存当前场景、实例、未知样本和复核状态 |
+| 事件日志层 | 七类 Event | 追加记录检测、复核、深度、规划、执行和知识演化原因 |
+
+长期知识不被单次观测直接修改；短期状态随观测和执行更新；事件只追加，不覆盖历史。
+
+## 3. 长期知识层
+
+### 3.1 WasteCategory 字段
 
 ```text
-不是 YOLO 类别
-不是稳定长期类别
-是短期记忆层中的不确定对象状态
-是人工复核和后续类别进化的入口
-```
-
----
-
-## 3. 标签映射原则
-
-为了复用不同数据集，系统保留轻量别名映射，但不把别名作为独立实体。
-
-| 外部标签 | 本项目类别 |
-|---|---|
-| `stone` | `concrete` |
-| `aggregate` | `concrete` |
-| `pipe` / `pipes` | `hard_plastic` |
-| `plastic` | `hard_plastic` |
-| `cardboard` | `paperboard` |
-| `timber` | `wood` |
-| `gypsum` | `gypsum_board` |
-| `plasterboard` | `gypsum_board` |
-| `steel` | `metal` |
-| `asbestos` / `asbestos_suspect` | `unknown` |
-
-这种映射的目的不是掩盖风险，而是避免在没有可靠训练数据和专业检测依据的情况下，让视觉模型“确认”高风险材料。疑似危险对象应进入 `unknown` 或人工复核队列。
-
----
-
-## 4. 长期属性定义
-
-长期知识层不是百科库，只保存会影响任务闭环的稳定先验。
-
-每个类别保留以下核心属性：
-
-| 字段 | 含义 | 取值 |
-|---|---|---|
-| `risk_level` | 处理风险 | `low / medium / high` |
-| `fragility` | 易碎性 | `low / medium / high` |
-| `graspability` | 夹爪可抓握性 | `low / medium / high` |
-| `pollution_level` | 污染或残留风险 | `low / medium / high` |
-| `recognition_difficulty` | 视觉识别难度 | `low / medium / high` |
-| `needs_llm_review` | 是否建议 VLM 或人工复核 | `true / false` |
-| `auto_processable` | 是否允许进入自动处理候选 | `true / false` |
-| `handling_mode` | 推荐处理方式 | 见下文 |
-| `grasp_difficulty` | 夹爪抓取难度 | `low / medium / high` |
-| `visual_prototype` | 类别常见视觉特征范围 | 结构化字典 |
-
-`handling_mode` 的取值：
-
-| 取值 | 含义 |
-|---|---|
-| `robot_grasp` | 可作为机械臂夹取候选 |
-| `robot_with_supervision` | 可由机械臂处理，但建议监督或确认 |
-| `human_review` | 需要人工复核后再决定 |
-| `human_only` | 只允许人工处理，不允许机械臂自动夹取 |
-
----
-
-## 5. 视觉原型不是硬分类规则
-
-`visual_prototype` 只表示“类别常见视觉特征范围”，不是硬规则。
-
-例如，`concrete` 常见为灰色、粗糙、不透明、低光泽、不规则碎块；但不是所有灰色粗糙物体都是混凝土。`hard_plastic` 可能有各种颜色，也可能透明或半透明，因此颜色对该类不是强判别特征。
-
-因此，系统不能使用：
-
-```text
-颜色是灰色 -> concrete
-```
-
-而应使用：
-
-```text
-YOLO 提出 concrete 假设
-VLM 提取当前实例属性
-KG 检查这些属性是否支持或冲突
-证据不足时进入 uncertain/unknown
-```
-
----
-
-## 6. 当前长期知识表
-
-| 类别 | 风险 | 易碎性 | 可抓握性 | 污染性 | 识别难度 | VLM 复核 | 自动处理候选 | 处理方式 | 抓取难度 |
-|---|---|---|---|---|---|---|---|---|---|
-| `concrete` | medium | low | low | low | medium | 否 | 否 | `robot_with_supervision` | high |
-| `brick` | medium | low | medium | low | low | 否 | 是 | `robot_grasp` | medium |
-| `tile` | medium | medium | medium | low | medium | 否 | 是 | `robot_with_supervision` | medium |
-| `wood` | low | low | medium | low | low | 否 | 是 | `robot_grasp` | medium |
-| `gypsum_board` | medium | high | low | medium | medium | 是 | 否 | `human_review` | high |
-| `foam` | low | low | medium | medium | medium | 是 | 是 | `robot_with_supervision` | medium |
-| `metal` | medium | low | medium | low | medium | 是 | 是 | `robot_with_supervision` | medium |
-| `soft_plastic` | low | low | medium | medium | medium | 是 | 是 | `robot_with_supervision` | medium |
-| `hard_plastic` | low | low | medium | medium | medium | 是 | 是 | `robot_grasp` | medium |
-| `paperboard` | low | medium | medium | low | medium | 是 | 是 | `robot_with_supervision` | medium |
-| `glass` | medium | high | low | low | high | 是 | 否 | `robot_with_supervision` | high |
-
-注意：`auto_processable = false` 的类别不会被规划器直接当作自动夹取目标。即使 `handling_mode` 是 `robot_with_supervision`，也必须经过监督或人工确认逻辑。
-
----
-
-## 7. VLM 的正确使用方式
-
-当前设计不让 VLM 自由回答“这是什么物体”。VLM 的角色是：
-
-```text
-结构化视觉属性抽取器 + YOLO 假设一致性校验器
-```
-
-VLM 应返回类似结构：
-
-```json
-{
-  "visual_attributes": {
-    "color": "gray",
-    "transparency": "opaque",
-    "gloss": "low",
-    "surface_texture": "rough",
-    "edge_shape": "irregular",
-    "shape_cue": "fragment"
-  },
-  "consistency": "support",
-  "decision": "agree",
-  "requires_human_review": false,
-  "reason": "The extracted attributes are consistent with the YOLO concrete hypothesis."
-}
-```
-
-如果 VLM 特征与 YOLO 类别冲突，或多个类别都能解释当前特征，则不能强行改类，应进入人工复核：
-
-```json
-{
-  "visual_attributes": {
-    "color": "gray",
-    "transparency": "opaque",
-    "gloss": "low",
-    "surface_texture": "powdery",
-    "edge_shape": "flat_broken",
-    "shape_cue": "board"
-  },
-  "consistency": "insufficient",
-  "decision": "uncertain",
-  "requires_human_review": true,
-  "reason": "The object may be gypsum board or another board-like material; the image is insufficient for safe automatic handling."
-}
-```
-
----
-
-## 8. 置信度分流规则
-
-当前建议采用三档分流：
-
-| 条件 | 系统动作 | 图谱状态 |
-|---|---|---|
-| `YOLO conf >= 0.85` 且类别规则允许 | 采用 YOLO 结果，写入已知实例 | known |
-| `0.40 <= YOLO conf < 0.85` | 调用 VLM 提取属性并做一致性校验 | known 或 uncertain |
-| `YOLO conf < 0.40` 或类别冲突 | 不强行分类，进入人工复核 | unknown |
-
-高置信度不等于可以直接抓取。规划器还必须检查：
-
-```text
+category_name
 risk_level
-handling_mode
-auto_processable
-mask quality
-safe_grasp_score
-occlusion_state
-blocked_by/supports
+fragility
+graspability_prior
+vlm_review_policy
+default_handling_policy
+visual_prototype
 ```
 
-例如 `glass` 即使 YOLO 置信度很高，也不应进入无监督自动夹取。
+枚举约束：
 
----
+- `risk_level`、`fragility`、`graspability_prior`：`low / medium / high`
+- `vlm_review_policy`：`threshold_based / always`
+- `default_handling_policy`：`auto_allowed / human_confirmation_required`
 
-## 9. unknown 的记忆与进化
-
-`unknown` 对象应保存：
+`visual_prototype` 只包含：
 
 ```text
-unknown_id
-image_crop_path
-mask_path
-yolo_topk
-vlm_feature_json
-first_seen_time
-last_seen_time
-appearance_count
-human_review_status
-human_review_result
-suggested_new_category
+dominant_color
+transparency
+glossiness
+surface_texture
+edge_fracture
+shape_form
 ```
 
-推荐进化流程：
+视觉原型用于 VLM 与 YOLO 假设的一致性校验，不是硬分类规则。
+
+### 3.2 11 类长期种子
+
+| 类别 | 风险 | 易碎性 | 抓取先验 | VLM 策略 | 默认处理策略 |
+| --- | --- | --- | --- | --- | --- |
+| `concrete` | medium | low | low | threshold_based | human_confirmation_required |
+| `brick` | medium | low | medium | threshold_based | auto_allowed |
+| `tile` | medium | high | medium | threshold_based | human_confirmation_required |
+| `wood` | low | low | medium | threshold_based | auto_allowed |
+| `gypsum_board` | medium | high | low | always | human_confirmation_required |
+| `foam` | low | low | medium | threshold_based | human_confirmation_required |
+| `metal` | medium | low | medium | threshold_based | human_confirmation_required |
+| `soft_plastic` | low | low | medium | threshold_based | human_confirmation_required |
+| `hard_plastic` | low | low | medium | threshold_based | auto_allowed |
+| `paperboard` | low | medium | medium | threshold_based | auto_allowed |
+| `glass` | high | high | low | always | human_confirmation_required |
+
+完整视觉原型值以 `wastekg/core/knowledge_base.py` 为单一代码来源。
+
+### 3.3 明确禁止的长期属性
+
+知识图谱不保存以下规划期信息：
 
 ```text
-未知物体出现
-  -> 存入 UnknownObjectMemory
-  -> 相似未知物体聚类
-  -> 多次出现后提示人工复核
-  -> 人工确认是否新增类别
-  -> 人工补充类别属性
-  -> 人工审核标注质量
-  -> 加入 training_candidates
-  -> 下一轮 YOLO 训练
-  -> 新模型评估通过后更新长期知识层
+task_value
+priority_tier
+dynamic_priority_score
+动作顺序
+失败恢复计划
 ```
 
-不能直接把未知物体自动加入训练集。否则背景阴影、反光、误检区域都可能污染训练数据。
+处理优先级只由 `action_planning_agent` 在规划时计算，不回写为长期或短期属性。
 
----
+## 4. 短期记忆层
 
-## 10. 短期记忆层字段
+### 4.1 Scene
 
-公网数据集主要用于训练 RGB 检测或实例分割模型，不能直接提供机械臂需要的真实三维状态。后续系统应使用 Intel RealSense D435i 在线生成短期记忆。
+```text
+scene_id
+captured_at
+rgb_ref
+depth_ref
+```
 
-短期记忆层建议保留以下核心字段：
+执行后或重新观测时创建新 `Scene`，不得覆盖旧场景。
+
+### 4.2 ObjectInstance
 
 ```text
 instance_id
-class_name
-confidence
 yolo_confidence
-llm_confidence
-final_confidence
-review_status
-center_xyz
-bbox_3d
-mask_polygon
-boundary_points
-visible_area_ratio
+recognition_status
+bbox_2d
+mask_ref
+crop_ref
+center_xyz_camera
+depth_valid_ratio
+observed_extent_3d
 occlusion_state
-contact_state
-support_state
-blocked_by
-supports
-grasp_candidates
-safe_grasp_score
+vlm_consistency
+current_handling_policy
 task_status
-last_action
-metadata
+attempt_count
 ```
 
-其中：
+关键枚举：
 
-- `mask_polygon` 来自 YOLO-seg 或其他分割模型；
-- `boundary_points` 可用于边界引导抓取；
-- `visible_area_ratio` 用于判断遮挡程度；
-- `grasp_candidates` 可来自抓取检测模型或启发式算法；
-- `safe_grasp_score` 用于规划器排序；
-- `metadata` 可保存 VLM 属性、unknown 原因、人工复核结果。
+- `recognition_status`：`accepted / review_required / unknown`
+- `vlm_consistency`：`support / conflict / not_checked`
+- `current_handling_policy`：`auto_allowed / human_confirmation_required / human_review_required / robot_forbidden`
+- `task_status`：`pending / processing / completed / failed`
 
----
+类别不能作为 `ObjectInstance` 节点属性持久化。YOLO 候选类别使用 `CANDIDATE_OF`，确认类别使用 `CONFIRMED_AS`。
 
-## 11. 与 RealSense、YOLO 和 VLM 的关系
+`safe_grasp_score` 可以作为 RGB-D 几何模块的临时计算结果，但不是当前知识图谱节点属性。
 
-推荐流程：
+### 4.3 UnknownSample
 
 ```text
-YOLO-seg 输出类别、置信度、mask
-  -> 高置信度已知类进入图谱候选状态
-  -> 中置信度目标进入 VLM 属性一致性校验
-  -> 低置信度或冲突目标进入 unknown/人工复核
-  -> RealSense 深度补充 center_xyz、bbox_3d、空间关系
-  -> 写入短期记忆层
-  -> 长期知识层投影 risk/handling/grasp 先验
-  -> LangGraph 规划器读取图谱状态
-  -> ROS2 执行后回写事件日志和短期状态
+sample_id
+crop_ref
+mask_ref
+yolo_topk
+vlm_attributes
+review_status
+human_label
 ```
 
-长期知识层只提供稳定先验，不应被单次观测覆盖。短期记忆层反映当前场景，会随感知和机械臂动作持续变化。
-
----
-
-## 12. 数据来源说明
-
-当前长期知识中常见建筑拆除材料参考 EPA 对 C&D materials 的分类说明：
-
-- <https://www.epa.gov/smm/sustainable-management-construction-and-demolition-materials>
-
-Roboflow Universe 可以继续作为补充训练数据来源，尤其是玻璃类数据。但每个数据集都必须单独核查类别、许可证、标注质量和是否适合建筑垃圾场景。
-
----
-
-## 13. RealSense 接入后的知识图谱职责边界
-
-RealSense D435i 不负责定义新的长期类别，也不应该直接修改 `risk_level`、`handling_mode` 等长期先验。它的作用是把当前场景中的实例状态补充完整，使短期记忆层从“二维识别结果”升级为“可规划的三维世界状态”。
-
-接入 RealSense 后，推荐的数据流为：
+### 4.4 UnknownCluster
 
 ```text
-RGB 图像
-  -> YOLO-seg 输出类别、置信度、bbox、mask
-  -> aligned depth 图补充每个 mask 内的深度点
-  -> 计算 center_xyz、bbox_3d、visible_area_ratio、grasp_candidates、safe_grasp_score
-  -> 写入 Instance 短期记忆节点
-  -> 由长期 Category 投影风险、易碎性、处理方式等先验
-  -> 规划器读取可抓取目标和需人工介入目标
+cluster_id
+member_count
+prototype_attributes
+representative_crop_ref
+review_status
+candidate_category_name
 ```
 
-需要保持以下边界：
+未知样本不得自动进入训练集、自动新增长期类别或依据单次 VLM 判断更新类别体系。
 
-- `Category` 长期知识层：稳定类别和处理先验，不因单帧观测改变；
-- `Instance` 短期记忆层：由 YOLO、RealSense、VLM、执行反馈持续更新；
-- `UnknownObjectMemory`：保存无法可靠归类的对象档案；
-- `Event` 事件日志层：记录每次观测、识别复核、坐标更新、执行反馈；
-- ROS2 执行层：只读取图谱筛选后的目标，不直接读取原始 YOLO 输出；
-- UI 层：只负责展示、人工确认和任务审查，不直接控制机械臂。
+## 5. 图关系
 
-第一阶段 RealSense 验证只要求输出相机坐标系下的 `center_xyz`。在真实抓取前，必须完成相机坐标系到机械臂基座坐标系的外参标定，即 `T_base_camera`。未完成该标定前，图谱中的三维坐标只能用于可视化、排序和空跑验证，不能直接作为真实夹爪闭合目标。
+关系只保存 `source_id / relation / target_id`，不附加置信度、时间或其他属性。当前关系包括：
+
+```text
+Scene -[CONTAINS]-> ObjectInstance
+ObjectInstance -[CANDIDATE_OF]-> WasteCategory
+ObjectInstance -[CONFIRMED_AS]-> WasteCategory
+ObjectInstance -[NEAR]-> ObjectInstance
+ObjectInstance -[RECORDED_AS]-> UnknownSample
+UnknownSample -[MEMBER_OF]-> UnknownCluster
+```
+
+事件可通过 `DETECTED`、`REVIEWS`、`UPDATES`、`CONFIRMS`、`SELECTS`、`EXECUTES`、`EVOLVES`、`IN_SCENE`、`PROPOSED` 等关系关联对象、类别和场景。关系类型由 `wastekg/graph/store.py` 的白名单约束。
+
+## 6. 事件日志层
+
+所有事件包含：
+
+```text
+event_id
+event_type
+event_time
+event_source
+```
+
+七类事件及固定来源：
+
+| 事件 | event_source | 专属字段 |
+| --- | --- | --- |
+| `DetectionEvent` | `yolo_detector` | `yolo_confidence, bbox_2d, mask_ref, crop_ref` |
+| `VLMReviewEvent` | `vlm_service` | `image_quality, visual_attributes, consistency, reason` |
+| `DepthUpdateEvent` | `depth_processor` | `center_xyz_camera, depth_valid_ratio, observed_extent_3d, occlusion_state` |
+| `HumanReviewEvent` | `human_reviewer` | `review_action, reason` |
+| `PlanningEvent` | `task_planner` | `planned_action, reason` |
+| `ExecutionEvent` | `robot_controller` | `execution_result, failure_reason` |
+| `KnowledgeEvolutionEvent` | `knowledge_updater` | `evolution_action, reason` |
+
+事件字段和来源由 `wastekg/core/models.py` 强校验，未定义字段不能写入。
+
+## 7. YOLO、VLM 与状态分流
+
+YOLO 只生成候选，不输出最终真值：
+
+```text
+proposal_conf = 0.05
+review_conf = 0.30
+accept_conf = 0.75
+```
+
+- `conf < 0.05`：不进入候选池。
+- `0.05 <= conf < 0.30`：保留原 YOLO 假设，但 `recognition_status=unknown`。
+- `0.30 <= conf < 0.75`：进入 VLM 复核。
+- `conf >= 0.75`：仅满足类别策略时可接受。
+- `glass`、`gypsum_board`：无论置信度高低均执行 VLM 复核。
+
+后续按实验室自采验证集为各类别标定独立接受阈值，不能把全局初始阈值当作最终结论。
+
+VLM 只提取颜色、透明度、光泽、表面纹理、边缘断裂和形状等可见属性，并判断这些证据是否支持 YOLO 假设。VLM 与 YOLO 冲突时进入复核或未知状态，不自动把类别 A 改成类别 B。
+
+## 8. 规划与执行边界
+
+知识图谱输出 `graph_state`，包括当前类别关系、识别状态、处理策略、任务状态、尝试次数、深度、遮挡和类别风险先验。派生可行性至少检查：
+
+```text
+recognition_status == accepted
+current_handling_policy == auto_allowed
+depth_valid_ratio >= 0.30
+occlusion_state != partial
+attempt_count < 2
+```
+
+`risk_gate` 是确定性组件，不是智能体。`action_planning_agent` 先做硬过滤，再根据任务目标、YOLO 证据、处理权限和尝试次数计算动态优先级。`execution_agent` 只生成结构化 ROS2 bridge 请求，不发送 LLM 自由文本。
+
+只有真实机械执行才增加 `attempt_count`，执行成功和失败都增加一次。执行后必须记录 `ExecutionEvent` 并重新观测新场景；当前仓库尚未证明真实 ROS2/PiPER 闭环已经完成。
+
+## 9. 知识演化
+
+```text
+UnknownSample 累积
+  -> 可选 UnknownCluster 聚类
+  -> 人工确认
+  -> 类别定义与视觉原型审核
+  -> 数据审计和人工标注
+  -> YOLO 重新训练
+  -> 独立验证
+  -> KnowledgeEvolutionEvent
+  -> 更新长期知识
+```
+
+任何单次 YOLO、VLM 或聚类结果都不能直接修改 11 类长期知识。
+
+## 10. 当前代码映射
+
+```text
+wastekg/core/models.py             # 节点、关系和事件结构
+wastekg/core/knowledge_base.py     # 11 类长期种子
+wastekg/graph/store.py             # 状态更新、关系和事件写入
+wastekg/graph/query.py             # graph_state 可行性投影
+wastekg/graph/exporters.py         # JSON/Mermaid/Neo4j 导出
+wastekg/interfaces/contracts.py    # LangGraph/ROS2 输入输出契约
+```
+
+验证命令：
+
+```powershell
+cd C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg
+.\.venv\Scripts\python.exe -m unittest discover -s tests
+.\.venv\Scripts\python.exe scripts\graph\export_ui_snapshot.py
+```

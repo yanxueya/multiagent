@@ -1,4 +1,4 @@
-"""验证 test exporters 相关功能。"""
+"""验证新三层图谱的 JSON、Mermaid、JSONL 和 Neo4j 导出。"""
 
 import unittest
 
@@ -13,63 +13,43 @@ class ExporterTests(unittest.TestCase):
         seed_default_categories(self.graph)
         self.graph.apply_observation(
             Observation(
-                frame_id="frame_001",
+                frame_id="scene_001",
                 source="camera",
                 objects=[
-                    DetectedObject(
-                        temp_id="a",
-                        class_name="glass",
-                        confidence=0.93,
-                        center_xyz=(0.0, 0.0, 0.0),
-                        mask_polygon=[(1.0, 2.0), (3.0, 4.0)],
-                    ),
-                    DetectedObject(temp_id="b", class_name="brick", confidence=0.90, center_xyz=(0.0, 0.0, 0.10)),
+                    DetectedObject("a", "glass", 0.93, yolo_confidence=0.93, depth_valid_ratio=0.5),
+                    DetectedObject("b", "brick", 0.90, yolo_confidence=0.90, center_xyz=(0.1, 0.0, 0.0), depth_valid_ratio=0.8),
                 ],
             )
         )
 
-    def test_mermaid_contains_layers(self) -> None:
+    def test_mermaid_contains_three_layers_and_document_nodes(self) -> None:
         mermaid = graph_to_mermaid(self.graph)
         self.assertIn("长期知识层", mermaid)
         self.assertIn("短期记忆层", mermaid)
         self.assertIn("事件日志层", mermaid)
-        self.assertIn("classDef hazard", mermaid)
+        self.assertIn("Scene", mermaid)
+        self.assertIn("DetectionEvent", mermaid)
 
-    def test_neo4j_cypher_contains_event_and_instance_merges(self) -> None:
-        statements = graph_to_neo4j_cypher(self.graph)
-        joined = "\n".join(statements)
-        self.assertIn("MERGE (c:Category", joined)
-        self.assertIn("MERGE (i:Instance", joined)
-        self.assertIn("MERGE (e:Event", joined)
-        self.assertIn("OF_CATEGORY", joined)
-        self.assertFalse(any(";" in stmt for stmt in statements))
-        self.assertTrue(any("ABOUT_INSTANCE" in stmt or "ABOUT_CATEGORY" in stmt for stmt in statements))
+    def test_neo4j_uses_authoritative_labels_relations_and_fields(self) -> None:
+        joined = "\n".join(graph_to_neo4j_cypher(self.graph))
+        self.assertIn("WasteCategory", joined)
+        self.assertIn("ObjectInstance", joined)
+        self.assertIn("DetectionEvent", joined)
+        self.assertIn("CANDIDATE_OF", joined)
+        self.assertIn("CONFIRMED_AS", joined)
+        self.assertIn("default_handling_policy", joined)
+        self.assertNotIn("task_value", joined)
+        self.assertNotIn("safe_grasp_score", joined)
+        self.assertNotIn("OF_CATEGORY", joined)
 
-    def test_neo4j_category_export_contains_planning_attributes(self) -> None:
-        statements = graph_to_neo4j_cypher(self.graph)
-        category_statements = "\n".join(statement for statement in statements if statement.startswith("MERGE (c:Category"))
-
-        self.assertIn("handling_mode", category_statements)
-        self.assertIn("grasp_difficulty", category_statements)
-
-    def test_neo4j_cypher_is_ascii_safe_for_powershell_pipe(self) -> None:
-        statements = graph_to_neo4j_cypher(self.graph)
-
-        for statement in statements:
+    def test_neo4j_cypher_is_ascii_safe(self) -> None:
+        for statement in graph_to_neo4j_cypher(self.graph):
             statement.encode("ascii")
 
-    def test_neo4j_complex_instance_fields_are_stored_as_json(self) -> None:
-        statements = graph_to_neo4j_cypher(self.graph)
-        instance_statements = "\n".join(statement for statement in statements if statement.startswith("MERGE (i:Instance"))
-
-        self.assertIn("mask_polygon_json", instance_statements)
-        self.assertNotIn("mask_polygon: [[", instance_statements)
-
-    def test_jsonl_contains_one_event_per_line(self) -> None:
-        jsonl = graph_events_to_jsonl(self.graph)
-        lines = [line for line in jsonl.splitlines() if line.strip()]
-        self.assertGreaterEqual(len(lines), 1)
-        self.assertTrue(lines[0].startswith("{"))
+    def test_jsonl_contains_only_supported_event_types(self) -> None:
+        lines = [line for line in graph_events_to_jsonl(self.graph).splitlines() if line]
+        self.assertTrue(lines)
+        self.assertTrue(all("Event" in line for line in lines))
 
 
 if __name__ == "__main__":

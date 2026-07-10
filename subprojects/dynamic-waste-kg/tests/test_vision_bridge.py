@@ -1,4 +1,4 @@
-"""验证 test vision bridge 相关功能。"""
+﻿"""验证 test vision bridge 相关功能。"""
 
 import unittest
 
@@ -19,7 +19,7 @@ class VisionBridgeTests(unittest.TestCase):
                     "llm_class_name": "glass",
                     "llm_confidence": 0.91,
                     "center_xyz": [0.1, 0.2, 0.3],
-                    "bbox": [0.1, 0.2, 0.3, 0.05, 0.05, 0.05],
+                    "bbox_2d": [10, 20, 30, 50],
                     "risk_hint": "medium",
                     "mask_polygon": [[10, 10], [30, 10], [30, 35], [10, 35]],
                     "boundary_points": [[10, 10], [30, 10], [30, 35], [10, 35]],
@@ -42,12 +42,13 @@ class VisionBridgeTests(unittest.TestCase):
 
         observation = vision_packet_to_observation(packet)
         self.assertEqual(observation.objects[0].class_name, "glass")
-        self.assertEqual(observation.objects[0].confidence, 0.91)
+        self.assertEqual(observation.objects[0].confidence, 0.73)
         self.assertEqual(observation.relations[0].relation, "near")
         self.assertEqual(observation.objects[0].metadata["source"], "unit_test")
         self.assertEqual(len(observation.objects[0].mask_polygon), 4)
         self.assertEqual(observation.objects[0].visible_area_ratio, 0.82)
         self.assertEqual(observation.objects[0].safe_grasp_score, 0.44)
+        self.assertEqual(observation.objects[0].bbox_2d, (10.0, 20.0, 30.0, 50.0))
 
     def test_observation_can_write_into_graph(self) -> None:
         graph = KnowledgeGraph()
@@ -66,7 +67,8 @@ class VisionBridgeTests(unittest.TestCase):
         )
         graph.apply_observation(vision_packet_to_observation(packet))
         self.assertIn("brick_01", graph.instances)
-        self.assertEqual(graph.instances["brick_01"].handling_mode, "robot_grasp")
+        self.assertEqual(graph.instances["brick_01"].current_handling_policy, "auto_allowed")
+        self.assertEqual(graph.resolve_instance_category("brick_01"), "brick")
 
     def test_segmentation_and_grasp_fields_enter_short_term_memory(self) -> None:
         graph = KnowledgeGraph()
@@ -79,9 +81,11 @@ class VisionBridgeTests(unittest.TestCase):
                     "temp_id": "g1",
                     "yolo_class_name": "glass",
                     "yolo_confidence": 0.88,
-                    "mask_polygon": [[0.1, 0.1], [0.3, 0.1], [0.3, 0.4], [0.1, 0.4]],
-                    "boundary_points": [[0.1, 0.1], [0.3, 0.1], [0.3, 0.4], [0.1, 0.4]],
-                    "visible_area_ratio": 0.62,
+                    "bbox_2d": [10, 10, 40, 50],
+                    "mask_ref": "masks/glass_01.png",
+                    "crop_ref": "crops/glass_01.png",
+                    "depth_valid_ratio": 0.62,
+                    "observed_extent_3d": [0.2, 0.15, 0.02],
                     "occlusion_state": "partial",
                     "grasp_candidates": [{"center": [0.2, 0.25], "angle": 0.0, "score": 0.52}],
                     "safe_grasp_score": 0.31,
@@ -91,10 +95,12 @@ class VisionBridgeTests(unittest.TestCase):
 
         graph.apply_observation(vision_packet_to_observation(packet))
         instance = graph.instances["glass_01"]
-        self.assertEqual(instance.mask_polygon[0], (0.1, 0.1))
+        self.assertEqual(instance.mask_ref, "masks/glass_01.png")
+        self.assertEqual(instance.crop_ref, "crops/glass_01.png")
+        self.assertEqual(instance.depth_valid_ratio, 0.62)
         self.assertEqual(instance.occlusion_state, "partial")
-        self.assertEqual(instance.safe_grasp_score, 0.31)
-        self.assertEqual(instance.handling_mode, "robot_with_supervision")
+        self.assertEqual(instance.current_handling_policy, "human_confirmation_required")
+        self.assertNotIn("safe_grasp_score", instance.to_dict())
 
     def test_dataset_aliases_are_canonicalized(self) -> None:
         graph = KnowledgeGraph()

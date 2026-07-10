@@ -1,32 +1,51 @@
-"""验证 test query 相关功能。"""
+"""验证 KG 向规划器投影状态但不保存优先级评分。"""
 
 import unittest
 
+from wastekg import seed_default_categories
 from wastekg.core.models import DetectedObject, Observation
 from wastekg.graph.query import build_planning_context
 from wastekg.graph.store import KnowledgeGraph
 
 
 class QueryTests(unittest.TestCase):
-    def test_build_planning_context_returns_task_ready_view(self) -> None:
+    def test_build_planning_context_uses_category_relations(self) -> None:
         graph = KnowledgeGraph()
+        seed_default_categories(graph)
         graph.apply_observation(
             Observation(
-                frame_id="f1",
+                frame_id="scene_001",
+                source="realsense",
+                objects=[DetectedObject("d1", "brick", 0.95, depth_valid_ratio=0.8, occlusion_state="none")],
+            )
+        )
+        context = build_planning_context(graph, task={"target_categories": ["brick"], "max_candidates": 5})
+
+        self.assertEqual(context["candidate_count"], 1)
+        self.assertEqual(context["candidates"][0]["candidate_class"], "brick")
+        self.assertTrue(context["graph_state"][0]["can_attempt_now"])
+        self.assertNotIn("task_value", context["graph_state"][0])
+        self.assertNotIn("dynamic_priority_score", context["graph_state"][0])
+
+    def test_review_policy_and_depth_are_hard_feasibility_gates(self) -> None:
+        graph = KnowledgeGraph()
+        seed_default_categories(graph)
+        graph.apply_observation(
+            Observation(
+                frame_id="scene_001",
                 source="realsense",
                 objects=[
-                    DetectedObject(temp_id="t1", class_name="brick", confidence=0.95, center_xyz=(0.0, 0.0, 0.0)),
-                    DetectedObject(temp_id="t2", class_name="paint_can", confidence=0.90, center_xyz=(0.1, 0.1, 0.0), risk_level="high"),
+                    DetectedObject("a", "brick", 0.95, depth_valid_ratio=0.8, occlusion_state="none"),
+                    DetectedObject("b", "glass", 0.92, depth_valid_ratio=0.8, occlusion_state="none"),
                 ],
             )
         )
+        state = {item["instance_id"]: item for item in build_planning_context(graph)["graph_state"]}
 
-        context = build_planning_context(graph, task={"target_categories": ["paint_can"], "max_candidates": 5})
-
-        self.assertIn("candidates", context)
-        self.assertGreaterEqual(context["candidate_count"], 1)
-        self.assertTrue(any(item["class_name"] == "paint_can" for item in context["candidates"]))
-        self.assertIn("graph_summary", context)
+        self.assertTrue(state["brick_01"]["can_attempt_now"])
+        self.assertFalse(state["glass_01"]["can_attempt_now"])
+        self.assertTrue(state["glass_01"]["requires_review"])
+        self.assertIn("current_handling_policy=human_confirmation_required", state["glass_01"]["feasibility_reasons"])
 
 
 if __name__ == "__main__":

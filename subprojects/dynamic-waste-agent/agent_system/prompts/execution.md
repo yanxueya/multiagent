@@ -1,5 +1,3 @@
-# execution_agent prompt placeholder
+# 已迁移
 
-职责：将已批准计划封装成 ROS2 桥接请求，并持续跟踪执行反馈。
-
-禁止：在未接收到确认的高风险场景中直接执行。
+请查看 $(System.Collections.DictionaryEntry.Value)。该文件仅保留为旧路径提示，避免把非 agent 组件误解为智能体。

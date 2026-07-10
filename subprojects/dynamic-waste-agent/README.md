@@ -1,46 +1,60 @@
 # dynamic-waste-agent
 
-这是后续多智能体系统的占位子项目，目标是在 `dynamic-waste-kg` 已有知识图谱与感知结果之上，构建 LangChain/LangGraph 风格的任务编排层。
+本子项目负责建筑废弃物分拣系统的 LangGraph 多智能体编排，不直接维护知识图谱事实、不训练模型、不直接控制 ROS2 硬件。
 
-当前状态：结构占位，尚未接入真实 LLM、LangGraph、ROS2 或机器人执行器。
+## 当前架构
 
-## 五个智能体
+```text
+4 个真正智能体 + KG 状态底座 + 确定性门控与桥接组件
+```
 
-| 智能体 | 主要职责 | 上游输入 | 下游输出 |
-| --- | --- | --- | --- |
-| `perception_agent` | 汇总视觉检测、分割和场景状态 | 相机/YOLO/VLM/传感器结果 | 规范化感知事件 |
-| `knowledge_agent` | 查询和更新动态废弃物知识图谱 | 感知事件、任务上下文 | 类型、属性、关系、处置约束 |
-| `risk_agent` | 评估安全、环境和不确定性风险 | KG 结果、置信度、现场约束 | 风险等级与人工确认建议 |
-| `planning_agent` | 生成分拣、搬运或避障计划 | 风险结果、任务目标、机器人能力 | 任务计划与动作候选 |
-| `execution_agent` | 将计划转成 ROS2 可执行命令并跟踪反馈 | 任务计划、机器人状态 | 执行请求、状态反馈、异常事件 |
+| 类型 | 名称 | 职责 |
+| --- | --- | --- |
+| Agent | `supervisor_agent` | 目标分解、流程调度、状态回收与重规划触发 |
+| Agent | `perception_agent` | 组织 YOLO、VLM、RealSense 和人工输入的结构化感知事件 |
+| Agent | `action_planning_agent` | 读取 KG 状态和风险门控，生成动作顺序与失败恢复 |
+| Agent | `execution_agent` | 把已批准计划封装为结构化 ROS2 bridge 请求 |
+| Component | `world_model_adapter` | 从 `dynamic-waste-kg` 投影长期类别属性、实例状态和事件引用 |
+| Gate | `risk_gate` | 检查风险、复核要求、失败次数和当前可执行性 |
+| Gate | `human_control_gate` | 接收人工确认、拒绝或保持未知的操作 |
+| Bridge | `ros2_bridge` | 对接 ROS2/PiPER 的结构化接口 |
+| Component | `feedback_update` | 把人工与执行反馈整理为 KG 事件回写 |
 
-## 预期目录
+## 决策逻辑
+
+知识图谱不保存规划优先级或评分。KG 适配层只把长期类别先验、当前实例状态和可行性投影为 `graph_state`；优先级仅由 `action_planning_agent` 在规划时动态计算。
+
+```text
+perception_agent
+  -> world_model_adapter / KG graph_state
+  -> risk_gate
+  -> action_planning_agent
+  -> human_control_gate 或 execution_agent
+  -> ros2_bridge
+  -> feedback_update / KG EventLog
+```
+
+规划器必须先排除 `can_attempt_now=false`、需要人工复核或被风险门控阻止的对象，再根据任务目标、YOLO 置信度、识别状态、当前处理策略和 `attempt_count` 计算 `dynamic_priority_score`。该评分只存在于规划结果，不回写知识图谱。
+
+## 目录结构
 
 ```text
 agent_system/
-  agents/       # 5 个智能体的最小占位
-  prompts/      # 各智能体提示词边界
-  schemas/      # 跨智能体消息、动作、反馈结构
-  tools/        # KG、ROS2、视觉工具适配器占位
-  config.py     # 配置边界
-  graph.py      # 编排图占位
-  state.py      # 共享状态结构
+  agents/       # 4 个真正智能体描述
+  components/   # KG 适配、风险门控等非智能体组件
+  prompts/      # 智能体 prompt 与组件边界
+  schemas/      # graph_state、计划和消息契约
+  graph.py      # LangGraph 编排图
+  planner.py    # 操作序列规划器
+  state.py      # 共享状态
 ```
 
-## 运行
-
-当前不提供业务运行入口。后续接入 LangGraph 后，建议提供：
+## 运行与测试
 
 ```powershell
-cd subprojects/dynamic-waste-agent
-python -m agent_system.graph
+cd C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-agent
+.\.venv\Scripts\python.exe -m agent_system.graph
+.\.venv\Scripts\python.exe -m unittest discover -s tests
 ```
 
-## 测试
-
-当前只做结构占位。后续应优先增加：
-
-- 共享状态 schema 测试。
-- 每个智能体的输入输出契约测试。
-- KG 工具适配器的离线测试。
-- ROS2 工具适配器的 mock 测试，避免在单元测试中启动真实机器人。
+当前不声称已验证真实 ROS2 或机械臂闭环。`unknown` 是短期状态，不是 YOLO 类别或长期类别。

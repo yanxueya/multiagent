@@ -9,16 +9,16 @@ from wastekg.graph.store import KnowledgeGraph
 class StoreTests(unittest.TestCase):
     def test_register_category_and_ingest_observation(self) -> None:
         graph = KnowledgeGraph()
-        graph.register_category(CategorySpec(name="brick", category="building_waste"))
+        graph.register_category(CategorySpec(name="brick"))
         summary = graph.apply_observation(Observation(frame_id="f1", source="realsense"))
 
         self.assertIn("brick", graph.categories)
         self.assertEqual(summary["frame_id"], "f1")
-        self.assertGreaterEqual(len(graph.events), 2)
+        self.assertIn("f1", graph.scenes)
 
     def test_create_instances_from_observation(self) -> None:
         graph = KnowledgeGraph()
-        graph.register_category(CategorySpec(name="brick", category="building_waste"))
+        graph.register_category(CategorySpec(name="brick"))
         summary = graph.apply_observation(
             Observation(
                 frame_id="f2",

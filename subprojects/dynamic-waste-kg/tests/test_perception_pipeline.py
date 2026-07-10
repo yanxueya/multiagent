@@ -1,4 +1,4 @@
-"""验证 test perception pipeline 相关功能。"""
+﻿"""验证 test perception pipeline 相关功能。"""
 
 import unittest
 
@@ -88,10 +88,13 @@ class PerceptionPipelineTests(unittest.TestCase):
             reviewer=FakeReviewer(),
         )
 
-        self.assertEqual(packet.detections[0].resolved_class_name(), "glass")
-        self.assertEqual(result["created_instances"], ["glass_01"])
-        self.assertIn("glass_01", graph.instances)
-        self.assertFalse(graph.instances["glass_01"].processable)
+        self.assertEqual(packet.detections[0].resolved_class_name(), "brick")
+        self.assertEqual(packet.detections[0].recognition_status(), "unknown")
+        self.assertEqual(result["created_instances"], ["unknown_01"])
+        self.assertIn("unknown_01", graph.instances)
+        self.assertEqual(graph.instances["unknown_01"].current_handling_policy, "robot_forbidden")
+        self.assertIn(("unknown_01", "CANDIDATE_OF", "brick"), graph.edges)
+        self.assertTrue(graph.unknown_samples)
 
     def test_apply_pipeline_forwards_paper_visual_class_whitelist(self) -> None:
         graph = KnowledgeGraph()
@@ -143,14 +146,14 @@ class PerceptionPipelineTests(unittest.TestCase):
             allowed_classes=["concrete", "brick", "gypsum_board", "unknown"],
         )
 
-        self.assertEqual(packet.detections[0].resolved_class_name(), "unknown")
+        self.assertEqual(packet.detections[0].resolved_class_name(), "gypsum_board")
+        self.assertEqual(packet.detections[0].recognition_status(), "unknown")
         self.assertEqual(result["created_instances"], ["unknown_01"])
         instance = graph.instances["unknown_01"]
-        self.assertEqual(instance.class_name, "unknown")
+        self.assertEqual(graph.resolve_instance_category("unknown_01"), "gypsum_board")
         self.assertEqual(instance.yolo_confidence, 0.90)
-        self.assertEqual(instance.llm_confidence, 0.75)
-        self.assertEqual(instance.review_status, "human_review_required")
-        self.assertEqual(instance.handling_mode, "human_review")
+        self.assertEqual(instance.recognition_status, "unknown")
+        self.assertEqual(instance.current_handling_policy, "robot_forbidden")
 
     def test_very_low_confidence_detection_becomes_unknown_without_llm_review(self) -> None:
         records = build_records_with_optional_review(
@@ -158,9 +161,10 @@ class PerceptionPipelineTests(unittest.TestCase):
             reviewer=FakeReviewer(),
         )
 
-        self.assertEqual(records[0]["yolo_class_name"], "unknown")
+        self.assertEqual(records[0]["yolo_class_name"], "brick")
         self.assertTrue(records[0]["metadata"]["need_human_review"])
         self.assertEqual(records[0]["metadata"]["review_decision"], "unknown")
+        self.assertEqual(records[0]["metadata"]["recognition_status"], "unknown")
         self.assertEqual(records[0]["metadata"]["original_yolo_class_name"], "brick")
 
 

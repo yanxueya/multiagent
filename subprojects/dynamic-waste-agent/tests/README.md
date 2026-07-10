@@ -1,8 +1,9 @@
 # tests
 
-后续测试优先覆盖：
+测试优先覆盖：
 
-- 智能体输入输出 schema。
+- 4 个真正智能体的输入输出边界。
+- 非智能体组件：world_model_adapter、risk_gate、human_control_gate、ros2_bridge。
 - 编排图节点顺序和失败分支。
 - KG 工具的离线 mock。
-- ROS2 桥接工具的 mock，不启动真实机器人。
+- ROS2 bridge 工具的 mock，不启动真实机器人。

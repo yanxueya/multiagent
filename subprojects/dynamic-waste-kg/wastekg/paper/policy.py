@@ -1,4 +1,4 @@
-"""定义小论文实验使用的策略路由规则。"""
+﻿"""定义小论文实验使用的策略路由规则。"""
 
 from __future__ import annotations
 
@@ -15,6 +15,8 @@ HUMAN_REVIEW_REQUIRED = "HUMAN_REVIEW_REQUIRED"
 POLICY_VERSION = "paper_policy_v1_conservative"
 
 _HUMAN_REVIEW_STATUSES = {
+    "review_required",
+    "unknown",
     "needs_review",
     "human_review",
     "human_review_required",
@@ -101,30 +103,24 @@ def route_instance(
             reason="unknown_category",
         )
 
-    confidence = _resolved_confidence(instance)
-    review_status = (instance.review_status or "").lower()
+    confidence = instance.yolo_confidence
+    review_status = (instance.recognition_status or "").lower()
     task_status = (instance.task_status or "").lower()
 
-    if spec.handling_mode in {"human_only", "human_review"}:
-        return _result(instance, HUMAN_REVIEW_REQUIRED, f"handling_mode={spec.handling_mode}")
+    if review_status in _HUMAN_REVIEW_STATUSES or task_status in _HUMAN_REVIEW_STATUSES:
+        return _result(instance, HUMAN_REVIEW_REQUIRED, f"recognition_status={instance.recognition_status or instance.task_status}")
+
+    if instance.current_handling_policy in {"human_review_required", "robot_forbidden"}:
+        return _result(instance, HUMAN_REVIEW_REQUIRED, f"current_handling_policy={instance.current_handling_policy}")
 
     if spec.risk_level in {"high", "critical", "hazardous"}:
         return _result(instance, HUMAN_REVIEW_REQUIRED, f"risk_level={spec.risk_level}")
 
-    if review_status in _HUMAN_REVIEW_STATUSES or task_status in _HUMAN_REVIEW_STATUSES:
-        return _result(instance, HUMAN_REVIEW_REQUIRED, f"review_status={instance.review_status or instance.task_status}")
-
     if confidence < min_auto_confidence:
         return _result(instance, HUMAN_REVIEW_REQUIRED, f"final_confidence<{min_auto_confidence:.2f}")
 
-    if not instance.processable:
-        return _result(instance, SUPERVISED_CANDIDATE, "not_processable_requires_supervision")
-
-    if spec.handling_mode == "robot_with_supervision":
-        return _result(instance, SUPERVISED_CANDIDATE, "handling_mode=robot_with_supervision")
-
-    if spec.auto_processable and spec.handling_mode == "robot_grasp":
-        return _result(instance, AUTO_CANDIDATE, "auto_processable_robot_grasp")
+    if spec.default_handling_policy == "auto_allowed" and instance.current_handling_policy == "auto_allowed":
+        return _result(instance, AUTO_CANDIDATE, "auto_allowed")
 
     return _result(instance, SUPERVISED_CANDIDATE, "conservative_default")
 
@@ -166,18 +162,13 @@ def _result(instance: ObjectInstance, route: str, reason: str) -> PolicyRouteRes
     )
 
 
-def _resolved_confidence(instance: ObjectInstance) -> float:
-    return instance.final_confidence or instance.confidence or instance.yolo_confidence or instance.llm_confidence
-
-
 def _instance_from_case(case: PolicyCase, *, class_name: str) -> ObjectInstance:
     return ObjectInstance(
         instance_id=case.case_id,
         class_name=class_name,
-        confidence=case.final_confidence,
-        final_confidence=case.final_confidence,
-        review_status=case.review_status,
-        processable=case.processable,
+        yolo_confidence=case.final_confidence,
+        recognition_status="accepted" if case.review_status == "confirmed" else "review_required",
+        current_handling_policy="auto_allowed" if case.processable else "human_review_required",
     )
 
 

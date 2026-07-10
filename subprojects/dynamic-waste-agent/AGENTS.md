@@ -1,25 +1,40 @@
 # dynamic-waste-agent 开发约束
 
-本目录只负责多智能体编排，不直接维护数据集、训练脚本、论文草稿或 ROS2 包。
+本目录只负责 LangGraph 风格的多智能体编排，不直接维护数据集、训练脚本、论文草稿或 ROS2 包。
 
-## 边界
+## 架构边界
 
-- 通过 `dynamic-waste-kg` 获取知识图谱、类别、属性和感知流水线结果。
-- 通过 `dynamic-waste-ros2` 的桥接接口发送机器人动作或订阅机器人反馈。
+当前只把以下 4 个角色视为真正智能体：
+
+- `supervisor_agent`：总体规划与调度。
+- `perception_agent`：感知结果组织与标准化。
+- `action_planning_agent`：操作序列规划与失败恢复策略。
+- `execution_agent`：结构化 ROS2 bridge 请求封装与反馈整理。
+
+以下不是 agent，而是被 agent 调用或读取的系统组件：
+
+- `dynamic-waste-kg` / `world_model_adapter`：知识图谱状态适配层，不是独立智能体。
+- `risk_gate`：风险、复核和自动执行门控。
+- `human_control_gate`：人工确认入口。
+- `ros2_bridge`：ROS2/PiPER 结构化接口适配层。
+- `feedback_update`：执行反馈和人工确认结果的 KG 回写入口。
+
+## 决策边界
+
+- 知识图谱不保存 `task_value`、规划优先级、评分或动作顺序。
+- `graph_state` 只携带长期类别先验、当前实例状态、约束和可行性。
+- `action_planning_agent` 必须先读取 `graph_state` 和 `risk_assessments` 做硬过滤，再在规划期动态计算 `priority_tier` 与 `dynamic_priority_score`。
+- `can_attempt_now=false` 的对象只能延后、复核、解除阻塞或等待反馈更新，不能直接执行。
+- `execution_agent` 只能发送结构化 ROS2 bridge 请求，不得把 LLM 自由文本发给机器人。
+
+## 运行约束
+
 - 不在本目录直接运行模型训练。
 - 涉及模型训练时，只输出用户可执行的操作指令，不要在沙盒里代跑训练。
 - GPU 训练要合理：进行显式检查显存，并结合 8 GB 显存限制设计 batch size、输入尺寸和模型规模。
 
-## 智能体职责
-
-- `perception_agent`：只做感知结果汇总与语义标准化。
-- `knowledge_agent`：只做 KG 查询、更新建议和证据组织。
-- `risk_agent`：只做风险判断、置信度解释和人工确认建议。
-- `planning_agent`：只做任务计划，不直接控制硬件。
-- `execution_agent`：只做执行命令封装、状态跟踪和异常上报。
-
 ## 文档
 
-- 架构说明放在本目录 README 或 `docs/`。
+- 架构说明放在本目录 README 或 `agent_system/prompts/README.md`。
 - 中间实验记录不得放入本目录。
 - 小论文相关补充实验仍放在 `dynamic-waste-kg/paper_experiments/docs/`。
