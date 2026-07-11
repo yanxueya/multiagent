@@ -5,10 +5,16 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from wastekg.rgbd.realsense_bridge import RealSenseCaptureConfig, write_capture_metadata
+from wastekg.rgbd.realsense_bridge import RealSenseCaptureConfig, RealSenseDatasetCaptureConfig, capture_rgbd_dataset_session, write_capture_metadata
 
 
 class RealSenseBridgeTests(unittest.TestCase):
+    def test_dataset_capture_rejects_invalid_session_before_loading_sdk(self) -> None:
+        with self.assertRaisesRegex(ValueError, "session_id"):
+            capture_rgbd_dataset_session(Path("unused"), RealSenseDatasetCaptureConfig(session_id=""))
+        with self.assertRaisesRegex(ValueError, "count"):
+            capture_rgbd_dataset_session(Path("unused"), RealSenseDatasetCaptureConfig(session_id="test", count=0))
+
     def test_module_imports_without_realsense_sdk(self) -> None:
         config = RealSenseCaptureConfig(width=640, height=480, fps=30, warmup_frames=3)
 

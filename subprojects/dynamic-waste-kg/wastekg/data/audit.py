@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import csv
 import hashlib
 import importlib.metadata
@@ -38,13 +39,16 @@ def audit_dataset(dataset_root: Path) -> Dict[str, Any]:
         "out_of_range_coordinates": 0,
         "degenerate_polygons": 0,
         "duplicate_annotation_lines": 0,
+        "conflicting_annotation_classes": 0,
+        "conflicting_class_label_files": [],
         "ultralytics_duplicate_box_labels": 0,
         "unreadable_images": [],
     }
 
     for split in SPLITS:
         image_dir = _resolve_split_dir(dataset_root, config["split_paths"].get(split, f"images/{split}"))
-        label_dir = dataset_root / "labels" / split
+        adjacent_label_dir = image_dir.parent / "labels"
+        label_dir = adjacent_label_dir if adjacent_label_dir.exists() else dataset_root / "labels" / split
         image_paths = _image_paths(image_dir)
         label_paths = {path.stem: path for path in label_dir.glob("*.txt")} if label_dir.exists() else {}
         by_class: Counter[str] = Counter()
@@ -65,6 +69,8 @@ def audit_dataset(dataset_root: Path) -> Dict[str, Any]:
                     issues["empty_label_files"].append(f"{split}/{label_path.name}")
                 for issue_name, count in label_result["issues"].items():
                     issues[issue_name] += count
+                if label_result["issues"]["conflicting_annotation_classes"]:
+                    issues["conflicting_class_label_files"].append(f"{split}/{label_path.name}")
                 for class_id in label_result["class_ids"]:
                     by_class[class_names[class_id]] += 1
                 raw_valid_instances += label_result["raw_valid_instances"]
@@ -124,6 +130,20 @@ def _read_data_yaml(path: Path) -> Dict[str, Any]:
             split_paths[split_match.group(1)] = split_match.group(2).strip("'\"")
             in_names = False
             continue
+        inline_names_match = re.match(r"^names:\s*(.+?)\s*$", stripped)
+        if inline_names_match:
+            try:
+                inline_names = ast.literal_eval(inline_names_match.group(1))
+            except (SyntaxError, ValueError) as exc:
+                raise ValueError(f"data.yaml 的 names 内联值无法解析：{path}") from exc
+            if isinstance(inline_names, list):
+                class_mapping.update({index: str(name) for index, name in enumerate(inline_names)})
+            elif isinstance(inline_names, dict):
+                class_mapping.update({int(index): str(name) for index, name in inline_names.items()})
+            else:
+                raise ValueError(f"data.yaml 的 names 必须是列表或编号映射：{path}")
+            in_names = False
+            continue
         if stripped == "names:":
             in_names = True
             continue
@@ -147,7 +167,16 @@ def _read_data_yaml(path: Path) -> Dict[str, Any]:
 
 def _resolve_split_dir(dataset_root: Path, configured_path: str) -> Path:
     candidate = Path(configured_path)
-    return candidate if candidate.is_absolute() else dataset_root / candidate
+    if candidate.is_absolute():
+        return candidate
+    resolved = dataset_root / candidate
+    if resolved.exists():
+        return resolved
+    parts = list(candidate.parts)
+    while parts and parts[0] == "..":
+        parts.pop(0)
+    roboflow_fallback = dataset_root.joinpath(*parts)
+    return roboflow_fallback if roboflow_fallback.exists() else resolved
 
 
 def _image_paths(image_dir: Path) -> List[Path]:
@@ -164,6 +193,7 @@ def _audit_label_file(label_path: Path, class_count: int) -> Dict[str, Any]:
     valid_annotations: List[tuple[int, List[float]]] = []
     issues: Counter[str] = Counter()
     seen_annotations: set[tuple[int, tuple[float, ...]]] = set()
+    geometry_classes: Dict[tuple[float, ...], set[int]] = defaultdict(set)
     for raw_line in text.splitlines():
         tokens = raw_line.split()
         if len(tokens) < 7:
@@ -191,7 +221,10 @@ def _audit_label_file(label_path: Path, class_count: int) -> Dict[str, Any]:
         if annotation_key in seen_annotations:
             issues["duplicate_annotation_lines"] += 1
         seen_annotations.add(annotation_key)
+        geometry_classes[tuple(round(value, 8) for value in coordinates)].add(class_id)
         valid_annotations.append((class_id, coordinates))
+
+    issues["conflicting_annotation_classes"] += sum(len(class_ids) - 1 for class_ids in geometry_classes.values() if len(class_ids) > 1)
 
     kept_indices = _ultralytics_unique_annotation_indices(valid_annotations)
     # 这里保留 raw_valid_instances，便于区分原始有效标注和 Ultralytics 去重后的训练口径。

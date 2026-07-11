@@ -45,6 +45,7 @@
 用于理解训练数据、合并过程和模型结果：
 
 - [数据集处理与感知流水线](dataset_and_perception_pipeline_zh.md)
+- [眼在手上场景的最小数据采集与标注方案](../datasets/docs/minimal_eye_in_hand_collection_zh.md)
 - [当前 YOLO 模型训练结果图文说明](current_yolo_training_results_zh.md)
 - [Glass Debris 数据合并记录](../datasets/docs/glass_debris_dataset_merge_zh.md)
 - [2026.6.15 建筑垃圾数据合并记录](../datasets/docs/cdw2026_dataset_merge_and_asbestos_strategy_zh.md)

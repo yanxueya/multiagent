@@ -10,6 +10,10 @@
 - `docs/`：小论文补充实验说明、论文草稿、实验指令和历史稿。
 - `../artifacts/paper/`：脚本生成的 CSV、JSON、Markdown 结果文件。
 
+实验室增量数据与 E4 holdout 的处理依据见：
+
+- [`protocols/lab_domain_adaptation_and_e4_holdout.md`](protocols/lab_domain_adaptation_and_e4_holdout.md)
+
 ## 实验状态
 
 | 阶段 | 内容 | 当前状态 |

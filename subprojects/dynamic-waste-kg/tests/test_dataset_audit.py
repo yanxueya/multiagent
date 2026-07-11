@@ -29,6 +29,26 @@ CLASS_NAMES = [
 
 
 class DatasetAuditTests(unittest.TestCase):
+    def test_audit_accepts_roboflow_inline_names_list(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "roboflow"
+            (root / "train" / "images").mkdir(parents=True)
+            (root / "train" / "labels").mkdir(parents=True)
+            (root / "data.yaml").write_text(
+                "train: ../train/images\nval: ../valid/images\nnc: 2\nnames: ['brick', 'wood']\n",
+                encoding="utf-8",
+            )
+            Image.new("RGB", (20, 20), color="red").save(root / "train" / "images" / "sample.jpg")
+            (root / "train" / "labels" / "sample.txt").write_text(
+                "0 0.1 0.1 0.8 0.1 0.8 0.8 0.1 0.8\n",
+                encoding="utf-8",
+            )
+
+            result = audit_dataset(root)
+
+            self.assertEqual(result["class_names"], ["brick", "wood"])
+            self.assertEqual(result["splits"]["train"]["instances"], 1)
+
     def test_audit_counts_instances_and_reports_cross_split_duplicates_and_invalid_labels(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "waste12"
@@ -99,6 +119,24 @@ class DatasetAuditTests(unittest.TestCase):
 
             self.assertEqual(result["annotation_issues"]["duplicate_annotation_lines"], 1)
             self.assertEqual(result["splits"]["train"]["instances"], 1)
+
+    def test_audit_reports_identical_polygon_assigned_to_different_classes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "waste12"
+            self._write_data_yaml(root)
+            (root / "images" / "train").mkdir(parents=True)
+            (root / "labels" / "train").mkdir(parents=True)
+            Image.new("RGB", (20, 20), color="red").save(root / "images" / "train" / "sample.jpg")
+            polygon = "0.1 0.1 0.8 0.1 0.8 0.8 0.1 0.8"
+            (root / "labels" / "train" / "sample.txt").write_text(
+                f"0 {polygon}\n1 {polygon}\n",
+                encoding="utf-8",
+            )
+
+            result = audit_dataset(root)
+
+            self.assertEqual(result["annotation_issues"]["conflicting_annotation_classes"], 1)
+            self.assertEqual(result["annotation_issues"]["conflicting_class_label_files"], ["train/sample.txt"])
 
     def test_audit_matches_ultralytics_box_level_deduplication_for_segmentation_labels(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
