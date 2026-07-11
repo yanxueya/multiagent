@@ -1,8 +1,9 @@
 // 本文件定义与 Word 版 KG 规范一致的 UI 实例状态、人工复核和 ROS2 门控。
 export type RecognitionStatus = "accepted" | "review_required" | "unknown";
-export type HandlingPolicy = "auto_allowed" | "human_review_required" | "robot_forbidden";
+export type HandlingPolicy = "auto_allowed" | "human_confirmation_required" | "human_review_required" | "robot_forbidden";
 export type TaskStatus = "pending" | "processing" | "completed" | "failed";
 export type VlmConsistencyStatus = "support" | "conflict" | "not_checked";
+export type OperationMode = "exploration" | "supervised_execution" | "human_collaboration";
 
 export interface WasteInstance {
   instance_id: string;
@@ -33,7 +34,7 @@ export interface TraceNodeLike { id: string; parentId: string | null; retryOf: s
 export interface Ros2CommandPreview {
   bridge: "dynamic_waste_ros2";
   command_type: "PickAndPlaceRequest";
-  status: "ready_for_ros2_bridge" | "blocked_by_human_gate";
+  status: "ready_for_ros2_bridge" | "blocked_by_policy";
   target_instance_id: string;
   frame_id: "camera_color_optical_frame";
   gate: {
@@ -48,7 +49,7 @@ export interface Ros2CommandPreview {
     require_recognition_status: "accepted";
     require_handling_policy: "auto_allowed";
     require_depth_valid_ratio_min: 0.3;
-    require_occlusion_not: "partial";
+    require_occlusion_state: "none";
     require_attempt_count_lt: 2;
   };
 }
@@ -57,9 +58,9 @@ export function canSendToRos2(instance: WasteInstance): boolean {
   return (
     instance.recognition_status === "accepted" &&
     instance.current_handling_policy === "auto_allowed" &&
-    ["pending", "processing"].includes(instance.task_status) &&
+    instance.task_status === "pending" &&
     instance.depth_valid_ratio >= 0.3 &&
-    instance.occlusion_state !== "partial" &&
+    instance.occlusion_state === "none" &&
     instance.attempt_count < 2
   );
 }
@@ -85,15 +86,15 @@ export function buildRos2CommandPreview(instance: WasteInstance): Ros2CommandPre
   const gate = {
     recognition_status: instance.recognition_status === "accepted",
     handling_policy: instance.current_handling_policy === "auto_allowed",
-    task_status: ["pending", "processing"].includes(instance.task_status),
+    task_status: instance.task_status === "pending",
     depth: instance.depth_valid_ratio >= 0.3,
-    occlusion: instance.occlusion_state !== "partial",
+    occlusion: instance.occlusion_state === "none",
     retry: instance.attempt_count < 2,
   };
   return {
     bridge: "dynamic_waste_ros2",
     command_type: "PickAndPlaceRequest",
-    status: Object.values(gate).every(Boolean) ? "ready_for_ros2_bridge" : "blocked_by_human_gate",
+    status: Object.values(gate).every(Boolean) ? "ready_for_ros2_bridge" : "blocked_by_policy",
     target_instance_id: instance.instance_id,
     frame_id: "camera_color_optical_frame",
     gate,
@@ -101,7 +102,7 @@ export function buildRos2CommandPreview(instance: WasteInstance): Ros2CommandPre
       require_recognition_status: "accepted",
       require_handling_policy: "auto_allowed",
       require_depth_valid_ratio_min: 0.3,
-      require_occlusion_not: "partial",
+      require_occlusion_state: "none",
       require_attempt_count_lt: 2,
     },
   };

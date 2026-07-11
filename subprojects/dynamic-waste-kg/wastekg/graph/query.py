@@ -33,6 +33,7 @@ def build_planning_context(graph: KnowledgeGraph, task: Optional[Dict[str, Any]]
         "blocked": [item for item in graph_state if item["blocked"]],
         "risky": [item for item in graph_state if item["risk_level"] == "high"],
         "review_required": [item for item in graph_state if item["requires_review"]],
+        "eligible_instance_ids": [item["instance_id"] for item in graph_state if item["can_attempt_now"]],
         "relations": [
             edge.to_dict()
             for edge in graph.edges.values()
@@ -61,11 +62,18 @@ def _instance_state(graph: KnowledgeGraph, instance: ObjectInstance) -> Dict[str
         or category_name == "unknown"
     )
     depth_ready = instance.depth_valid_ratio >= 0.30
-    reachable = instance.occlusion_state != "partial"
+    reachable = instance.occlusion_state == "none"
     grasp_feasible = depth_ready and reachable and graspability_prior in {"medium", "high"}
-    blocked = instance.task_status == "failed" or instance.current_handling_policy == "robot_forbidden"
+    blocked = instance.task_status != "pending" or instance.current_handling_policy == "robot_forbidden"
     can_attempt_now = not requires_review and not blocked and grasp_feasible and instance.attempt_count < 2
     reasons: list[str] = []
+    near_neighbor_count = len(
+        {
+            edge.target_id if edge.source_id == instance.instance_id else edge.source_id
+            for edge in graph.edges.values()
+            if edge.relation == "NEAR" and instance.instance_id in {edge.source_id, edge.target_id}
+        }
+    )
     if instance.recognition_status != "accepted":
         reasons.append(f"recognition_status={instance.recognition_status}")
     if instance.current_handling_policy != "auto_allowed":
@@ -73,13 +81,16 @@ def _instance_state(graph: KnowledgeGraph, instance: ObjectInstance) -> Dict[str
     if not depth_ready:
         reasons.append("depth_valid_ratio<0.30")
     if not reachable:
-        reasons.append("occlusion_state=partial")
+        reasons.append(f"occlusion_state={instance.occlusion_state}")
     if graspability_prior == "low":
         reasons.append("graspability_prior=low")
     if instance.attempt_count >= 2:
         reasons.append("attempt_count>=2")
+    if instance.task_status != "pending":
+        reasons.append(f"task_status={instance.task_status}")
     return {
         "instance_id": instance.instance_id,
+        "scene_id": instance.last_seen_scene,
         "candidate_class": category_name,
         "recognition_status": instance.recognition_status,
         "current_handling_policy": instance.current_handling_policy,
@@ -94,6 +105,7 @@ def _instance_state(graph: KnowledgeGraph, instance: ObjectInstance) -> Dict[str
         "risk_level": risk_level,
         "fragility": category.fragility if category is not None else "unknown",
         "graspability_prior": graspability_prior,
+        "near_neighbor_count": near_neighbor_count,
         "can_attempt_now": can_attempt_now,
         "requires_review": requires_review,
         "blocked": blocked,

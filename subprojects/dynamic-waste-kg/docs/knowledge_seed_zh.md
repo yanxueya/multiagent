@@ -203,7 +203,7 @@ event_source
 | `DepthUpdateEvent` | `depth_processor` | `center_xyz_camera, depth_valid_ratio, observed_extent_3d, occlusion_state` |
 | `HumanReviewEvent` | `human_reviewer` | `review_action, reason` |
 | `PlanningEvent` | `task_planner` | `planned_action, reason` |
-| `ExecutionEvent` | `robot_controller` | `execution_result, failure_reason` |
+| `ExecutionEvent` | `robot_controller` | `action_id, physical_attempt_started, execution_result, failure_reason` |
 | `KnowledgeEvolutionEvent` | `knowledge_updater` | `evolution_action, reason` |
 
 事件字段和来源由 `wastekg/core/models.py` 强校验，未定义字段不能写入。
@@ -219,7 +219,7 @@ accept_conf = 0.75
 ```
 
 - `conf < 0.05`：不进入候选池。
-- `0.05 <= conf < 0.30`：保留原 YOLO 假设，但 `recognition_status=unknown`。
+- `0.05 <= conf < 0.30`：保留原 YOLO 假设，设置 `recognition_status=review_required`，等待人工判断为已有类别、未知对象或背景误检。
 - `0.30 <= conf < 0.75`：进入 VLM 复核。
 - `conf >= 0.75`：仅满足类别策略时可接受。
 - `glass`、`gypsum_board`：无论置信度高低均执行 VLM 复核。
@@ -240,9 +240,9 @@ occlusion_state != partial
 attempt_count < 2
 ```
 
-`risk_gate` 是确定性组件，不是智能体。`action_planning_agent` 先做硬过滤，再根据任务目标、YOLO 证据、处理权限和尝试次数计算动态优先级。`execution_agent` 只生成结构化 ROS2 bridge 请求，不发送 LLM 自由文本。
+资格校验是确定性函数，不是智能体或独立图节点。`action_planning_agent` 先做硬过滤，再以 depth、graspability、NEAR 数量、运动距离和 attempt_count 做无权重字典序，并且每次只选择一个动作。`execution_agent` 只调用允许的结构化相机/ROS2/MoveIt 工具，不发送自由文本命令。
 
-只有真实机械执行才增加 `attempt_count`，执行成功和失败都增加一次。执行后必须记录 `ExecutionEvent` 并重新观测新场景；当前仓库尚未证明真实 ROS2/PiPER 闭环已经完成。
+只有 `physical_attempt_started=true` 的真实机械执行才增加 `attempt_count`，执行成功和失败都增加一次。MoveIt 仅规划失败或动作被拒绝时不创建 `ExecutionEvent`。`action_id` 用于防止 LangGraph 恢复时重复执行同一物理动作。执行后必须重新观测新场景；当前仓库尚未证明真实 ROS2/PiPER 闭环已经完成。
 
 ## 9. 知识演化
 

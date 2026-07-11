@@ -1,55 +1,65 @@
 # dynamic-waste-agent
 
-本子项目负责建筑废弃物分拣系统的 LangGraph 多智能体编排，不直接维护知识图谱事实、不训练模型、不直接控制 ROS2 硬件。
+本子项目实现建筑废弃物系统的三模式 LangGraph 编排。它不维护 KG 领域事实、不训练模型，也不发送自由文本 ROS2 命令。
 
-## 当前架构
+## 节点边界
 
 ```text
-4 个真正智能体 + KG 状态底座 + 确定性门控与桥接组件
+4 个 Agent
+  supervisor_agent
+  perception_agent
+  action_planning_agent
+  execution_agent
+
+2 个确定性节点
+  kg_writer
+  human_review_interrupt
 ```
 
-| 类型 | 名称 | 职责 |
+KG 查询、资格校验、相机、YOLO、VLM、D435i、MoveIt 和 ROS2 bridge 是工具或服务，不额外包装成图节点。
+
+## 三种模式
+
+| 模式 | 用途 | 主要流程 |
 | --- | --- | --- |
-| Agent | `supervisor_agent` | 目标分解、流程调度、状态回收与重规划触发 |
-| Agent | `perception_agent` | 组织 YOLO、VLM、RealSense 和人工输入的结构化感知事件 |
-| Agent | `action_planning_agent` | 读取 KG 状态和风险门控，生成动作顺序与失败恢复 |
-| Agent | `execution_agent` | 把已批准计划封装为结构化 ROS2 bridge 请求 |
-| Component | `world_model_adapter` | 从 `dynamic-waste-kg` 投影长期类别属性、实例状态和事件引用 |
-| Gate | `risk_gate` | 检查风险、复核要求、失败次数和当前可执行性 |
-| Gate | `human_control_gate` | 接收人工确认、拒绝或保持未知的操作 |
-| Bridge | `ros2_bridge` | 对接 ROS2/PiPER 的结构化接口 |
-| Component | `feedback_update` | 把人工与执行反馈整理为 KG 事件回写 |
+| `exploration` | 当前环境探查或历史 KG 查询 | 相机/只读 KG -> Perception -> KG Writer -> complete |
+| `supervised_execution` | 已知重复对象的监督自动执行 | 单步规划 -> 执行 -> 新 Scene -> 重规划 |
+| `human_collaboration` | 混杂、不确定或高风险场景 | 感知 -> interrupt 人工审核 -> 单步执行 -> 新 Scene |
 
-## 决策逻辑
+三种模式共用一张图。Supervisor 是条件路由器；安全规则仍由确定性条件边和 validator 强制执行。
 
-知识图谱不保存规划优先级或评分。KG 适配层只把长期类别先验、当前实例状态和可行性投影为 `graph_state`；优先级仅由 `action_planning_agent` 在规划时动态计算。
+## 滚动闭环
 
 ```text
-perception_agent
-  -> world_model_adapter / KG graph_state
-  -> risk_gate
-  -> action_planning_agent
-  -> human_control_gate 或 execution_agent
-  -> ros2_bridge
-  -> feedback_update / KG EventLog
+START -> Supervisor
+  -> acquire_scene -> Execution -> Perception -> KG Writer -> Supervisor
+  -> human_review -> Human Review Interrupt -> KG Writer -> Supervisor
+  -> plan -> Action Planner -> KG Writer -> Supervisor
+  -> execute -> Execution -> KG Writer -> Supervisor
+  -> complete / abort -> END
 ```
 
-规划器必须先排除 `can_attempt_now=false`、需要人工复核或被风险门控阻止的对象，再根据任务目标、YOLO 置信度、识别状态、当前处理策略和 `attempt_count` 计算 `dynamic_priority_score`。该评分只存在于规划结果，不回写知识图谱。
+一次计划只包含一个动作。任何真实物理动作成功或失败后都必须令当前 Scene 失效，重新采集 RGB-D 后再规划。
 
-## 目录结构
+## State 与 KG
 
-```text
-agent_system/
-  agents/       # 4 个真正智能体描述
-  components/   # KG 适配、风险门控等非智能体组件
-  prompts/      # 智能体 prompt 与组件边界
-  schemas/      # graph_state、计划和消息契约
-  graph.py      # LangGraph 编排图
-  planner.py    # 操作序列规划器
-  state.py      # 共享状态
-```
+LangGraph State 只保存 `operation_mode`、`user_goal`、`current_scene_id`、新鲜度、待复核/可执行 ID、当前单步计划、最近执行结果和 KG 引用。完整 WasteCategory、Scene、ObjectInstance、UnknownSample、事件和关系保存在 KG 中。
 
-## 运行与测试
+一个完整任务使用一个稳定 `thread_id`。当前默认使用 `InMemorySaver` 便于原型测试；接真实 UI/ROS2 前应换成持久化 checkpointer。
+
+## 规划规则
+
+- 先做识别、处理权限、任务状态、尝试次数、深度和遮挡硬过滤。
+- `failed` 不能直接重试，必须先形成新 Scene，重观测后恢复为 `pending`。
+- 第一阶段按 depth、graspability、NEAR 数量、运动距离和 attempt_count 做字典序。
+- `rank_candidates` 历史统计接口保留，但当前明确禁用。
+- 不保存 `task_value` 或人工加权分数。
+
+## Prompt
+
+权威入口是 [agent_system/prompts/README.md](agent_system/prompts/README.md)。旧的根级兼容 Prompt 已删除。
+
+## 运行
 
 ```powershell
 cd C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-agent
@@ -57,4 +67,4 @@ cd C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-agent
 .\.venv\Scripts\python.exe -m unittest discover -s tests
 ```
 
-当前不声称已验证真实 ROS2 或机械臂闭环。`unknown` 是短期状态，不是 YOLO 类别或长期类别。
+当前已实现编排、checkpointer、interrupt、schema 和外部工具契约；真实相机、Neo4j backend、ROS2/MoveIt 和机械臂闭环仍待接入。

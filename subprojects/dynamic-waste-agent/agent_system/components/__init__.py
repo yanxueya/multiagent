@@ -1,6 +1,6 @@
-"""非智能体系统组件描述。"""
+"""两个确定性图节点使用的 KG Writer 与安全校验工具。"""
 
-from .risk_gate import describe_risk_gate
-from .world_model_adapter import describe_world_model_adapter
+from .kg_writer import commit_kg_write, validate_kg_write
+from .validators import validate_action_plan
 
-__all__ = ["describe_risk_gate", "describe_world_model_adapter"]
+__all__ = ["commit_kg_write", "validate_action_plan", "validate_kg_write"]

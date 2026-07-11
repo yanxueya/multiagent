@@ -43,7 +43,7 @@ paperboard
 glass
 ```
 
-`unknown` 不是 YOLO 训练类别，而是低置信度、证据冲突、疑似危险、无法可靠归类或需要人工复核时的系统状态。`asbestos_suspect` 当前不是 YOLO 训练类别；除非用户明确要求查看旧实验，否则只视为历史记录或风险复核概念。
+`unknown` 不是 YOLO 训练类别，而是 VLM 冲突、人工标记未知或无法归入 11 类时的短期状态。`0.05 <= conf < 0.30` 的低置信度候选先进入 `review_required`，不自动成为 unknown。`asbestos_suspect` 当前不是 YOLO 训练类别；除非用户明确要求查看旧实验，否则只视为历史记录或风险复核概念。
 
 ## 2. 用户电脑约束
 
@@ -115,9 +115,9 @@ subprojects/dynamic-waste-kg/
 
 `dynamic-waste-kg` 负责知识图谱状态层：长期类别知识、短期对象记忆、`unknown` 复核入口、事件日志、YOLO/VLM/RealSense 输入适配、RGB-D 几何辅助、Neo4j 导出和面向多智能体/ROS2 的结构化接口。
 
-`dynamic-waste-agent` 负责 4 个真正智能体编排：总体规划 `supervisor_agent`、感知组织 `perception_agent`、行动规划 `action_planning_agent`、执行封装 `execution_agent`。知识图谱、风险门控、人工控制门控和 ROS2 bridge 都是被调用的系统组件，不是 agent。
+`dynamic-waste-agent` 负责 4 个真正智能体编排：总体规划 `supervisor_agent`、感知组织 `perception_agent`、单步行动规划 `action_planning_agent`、相机/动作执行 `execution_agent`。图中只有 `kg_writer` 和 `human_review_interrupt` 两个确定性非智能体节点；KG 查询、资格校验和 ROS2 bridge 是工具或服务。
 
-决策边界必须保持清晰：知识图谱 `graph_state` 只回答“当前对象是什么状态、现在能不能做”；`action_planning_agent` 先按可行性过滤，再根据任务目标、检测证据、处理权限和尝试次数动态计算 `priority_tier` 与 `dynamic_priority_score`，决定“先做什么、后做什么、失败后怎么办”。优先级、评分、计划顺序和失败策略不得写成 KG 属性。
+决策边界必须保持清晰：KG 保存领域事实；LangGraph State 只保存线程控制字段和 KG 引用。`action_planning_agent` 先做硬过滤，再使用无权重字典序选择唯一一个下一步动作。第一阶段不启用历史统计评分；任何优先级、计划顺序和失败策略都不得写成 KG 属性。
 
 `dynamic-waste-ros2` 负责 ROS2 消息、桥接、执行器和 bringup。ROS2 接收结构化命令，不接收 LLM 自由文本。
 
@@ -131,11 +131,12 @@ subprojects/dynamic-waste-kg/
 YOLO / RealSense / VLM
   -> perception_agent
   -> dynamic-waste-kg / KG graph_state
-  -> dynamic-waste-agent supervisor_agent + risk_gate + action_planning_agent
-  -> human_control_gate 或 execution_agent
+  -> dynamic-waste-agent supervisor_agent 条件路由
+  -> action_planning_agent / human_review_interrupt / execution_agent
+  -> kg_writer
   -> dynamic-waste-ros2
   -> 机械臂或仿真
-  -> 执行反馈
+  -> 执行反馈与新 Scene
   -> dynamic-waste-kg
 ```
 

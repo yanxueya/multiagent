@@ -261,17 +261,7 @@ print(action)
 
 ## 6. 交互关系怎么理解
 
-交互关系表示一个物体会影响另一个物体。
-
-常见关系有：
-
-- `on_top_of`
-- `touching`
-- `near`
-- `blocked_by`
-- `supports`
-
-这些关系很重要，因为规划器不能把所有物体都当成互相独立的。
+当前第一阶段只持久化 `NEAR` 实例关系。它由三维距离计算，只表示相邻或拥挤，不能推断阻挡、压覆、接触或支撑。每次物理动作后重新采集 Scene，再重新计算 NEAR。
 
 ## 7. 属性怎么理解
 
@@ -279,19 +269,21 @@ print(action)
 
 ### 实例属性
 
-- `center_xyz`
-- `priority`
-- `risk_level`
-- `processable`
-- `graspable`
-- `blocked_by`
+- `yolo_confidence`
+- `recognition_status`
+- `bbox_2d`、`mask_ref`、`crop_ref`
+- `center_xyz_camera`、`depth_valid_ratio`、`observed_extent_3d`
+- `occlusion_state`、`vlm_consistency`
+- `current_handling_policy`、`task_status`、`attempt_count`
 
 ### 类别属性
 
-- `material`
 - `risk_level`
-- `graspability`
-- `recyclability`
+- `fragility`
+- `graspability_prior`
+- `vlm_review_policy`
+- `default_handling_policy`
+- `visual_prototype`
 
 ## 8. 后面怎么继续
 

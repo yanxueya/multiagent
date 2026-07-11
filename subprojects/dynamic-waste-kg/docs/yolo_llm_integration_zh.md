@@ -126,15 +126,15 @@ YOLO 先给出：
 
 - `conf >= 0.75` 且类别为低风险、非强复核类：作为已知候选，但仍由知识图谱检查是否允许处理；
 - `0.30 <= conf < 0.75`：调用 VLM 提取视觉属性并做一致性校验；
-- `0.05 <= conf < 0.30`：保留为低置信候选，不接受类别，进入 `unknown` 或人工复核；
+- `0.05 <= conf < 0.30`：保留为低置信候选，不接受类别，设置 `recognition_status=review_required` 并等待人工复核；
 - `conf < 0.05`：不进入候选池；
 - 类别之间容易混淆时，调用 VLM；
-- VLM 与 YOLO 冲突时，不自动改类，令 `recognition_status=review_required` 或 `unknown`。
+- VLM 与 YOLO 冲突时，不自动改类，令 `recognition_status=unknown` 和 `current_handling_policy=robot_forbidden`。
 
 ### 推荐阈值
 
 - `proposal_conf = 0.05`：仅用于 YOLO 候选生成，尽量避免漏检；
-- `review_conf = 0.30`：低于该值的候选不接受类别，令 `recognition_status=unknown` 并进入人工复核；
+- `review_conf = 0.30`：低于该值的候选不接受类别，令 `recognition_status=review_required` 并进入人工复核；
 - `accept_conf = 0.75`：高于该值且非强复核类，才可作为已知候选；
 - `0.30 <= conf < 0.75`：进入 VLM 属性一致性校验；
 - `conf=0.05` 不是类别接受阈值，更不是自动抓取阈值。

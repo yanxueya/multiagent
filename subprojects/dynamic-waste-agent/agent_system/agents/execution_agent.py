@@ -1,8 +1,8 @@
-"""定义 execution agent 多智能体占位逻辑。"""
+"""定义 execution agent 的相机采集和受约束工具执行职责。"""
 
 def describe_execution_agent() -> dict[str, str]:
     return {
         "name": "execution_agent",
-        "role": "wrap approved plans as ROS2 execution requests and track feedback",
-        "status": "placeholder",
+        "role": "acquire RGB-D scenes or execute one validated ActionPlan through allowlisted tools",
+        "status": "implemented_contract_ros2_tools_pending",
     }

@@ -24,12 +24,39 @@ class LearningAttributeTests(unittest.TestCase):
         seed_default_categories(graph)
         graph.apply_observation(Observation(frame_id="scene_001", source="camera", objects=[DetectedObject("d1", "brick", 0.95)]))
         before = graph.instances["brick_01"].attempt_count
-        graph.record_execution_event("scene_001", "brick_01", execution_result="failure", failure_reason="grasp_failed")
+        graph.record_execution_event(
+            "scene_001",
+            "brick_01",
+            action_id="action_001",
+            physical_attempt_started=True,
+            execution_result="failure",
+            failure_reason="grasp_failed",
+        )
 
         instance = graph.instances["brick_01"]
         self.assertEqual(instance.attempt_count, before + 1)
         self.assertEqual(instance.task_status, "failed")
         self.assertEqual(graph.events[-1].event_type, "ExecutionEvent")
+        self.assertEqual(graph.events[-1].attributes["action_id"], "action_001")
+
+        with self.assertRaisesRegex(ValueError, "Duplicate physical action_id"):
+            graph.record_execution_event(
+                "scene_001",
+                "brick_01",
+                action_id="action_001",
+                physical_attempt_started=True,
+                execution_result="failure",
+            )
+
+        graph.apply_observation(
+            Observation(
+                frame_id="scene_002",
+                source="camera",
+                objects=[DetectedObject("d1", "brick", 0.96)],
+            )
+        )
+        self.assertEqual(graph.instances["brick_01"].task_status, "pending")
+        self.assertEqual(graph.instances["brick_01"].attempt_count, before + 1)
 
 
 if __name__ == "__main__":

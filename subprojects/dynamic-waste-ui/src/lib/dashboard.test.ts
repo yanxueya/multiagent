@@ -1,4 +1,4 @@
-// 本文件验证 UI 的人工复核、ROS2 门控和四智能体边界。
+// 本文件验证 UI 的人工复核、ROS2 门控和 4 Agent + 2 节点边界。
 import { describe, expect, it } from "vitest";
 import { agentTraceRuns } from "../data/mockDashboard";
 import { buildRos2CommandPreview, canSendToRos2, deriveReviewQueue, getConnectedGraphNodeIds, getFeedbackLoopNodeIds, getNestedTraceChildren, getRetryTraceNodes, type WasteInstance } from "./dashboard";
@@ -17,6 +17,8 @@ describe("dashboard logic", () => {
     expect(canSendToRos2(reviewGlass)).toBe(false);
     expect(canSendToRos2({ ...autoBrick, depth_valid_ratio: 0.2 })).toBe(false);
     expect(canSendToRos2({ ...autoBrick, occlusion_state: "partial" })).toBe(false);
+    expect(canSendToRos2({ ...autoBrick, occlusion_state: "unknown" })).toBe(false);
+    expect(canSendToRos2({ ...autoBrick, task_status: "processing" })).toBe(false);
     expect(canSendToRos2({ ...autoBrick, attempt_count: 2 })).toBe(false);
   });
 
@@ -28,7 +30,7 @@ describe("dashboard logic", () => {
 
   it("builds ROS2 preview with document-defined gates", () => {
     expect(buildRos2CommandPreview(autoBrick).status).toBe("ready_for_ros2_bridge");
-    expect(buildRos2CommandPreview(reviewGlass).status).toBe("blocked_by_human_gate");
+    expect(buildRos2CommandPreview(reviewGlass).status).toBe("blocked_by_policy");
     expect(buildRos2CommandPreview(autoBrick).gate).toHaveProperty("recognition_status");
     expect(buildRos2CommandPreview(autoBrick).gate).not.toHaveProperty("grasp");
   });
@@ -41,6 +43,8 @@ describe("dashboard logic", () => {
     const agents = agentTraceRuns.filter((run) => run.runType === "agent" && !run.retryOf).map((run) => run.id);
     expect(agents).toEqual(expect.arrayContaining(["supervisor_agent", "perception_agent", "action_planning_agent", "execution_agent"]));
     expect(agentTraceRuns.map((run) => run.id)).not.toContain("value_function");
+    expect(agentTraceRuns.map((run) => run.id)).toEqual(expect.arrayContaining(["kg_writer_perception", "human_review_interrupt"]));
+    expect(agentTraceRuns.map((run) => run.id)).not.toContain("risk_gate");
   });
 
   it("keeps retry and feedback trace structure", () => {

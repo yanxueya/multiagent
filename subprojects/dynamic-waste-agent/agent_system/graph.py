@@ -1,362 +1,439 @@
-"""LangGraph 风格的建筑废弃物多智能体编排。"""
+"""三模式、单步滚动规划的 LangGraph 多智能体编排。"""
 
 from __future__ import annotations
 
-from dataclasses import asdict, is_dataclass
-from typing import Any, Callable, Literal, TypedDict
+from dataclasses import dataclass, field
+from typing import Any, Callable, Iterable, Literal
 
-from agent_system.planner import build_ordered_plan
+from agent_system.components.kg_writer import KGWriterBackend, commit_kg_write
+from agent_system.components.validators import validate_action_plan
+from agent_system.planner import build_single_action_plan
+from agent_system.schemas.decision import CandidateSnapshot, SupervisorDecision
+from agent_system.state import WasteAgentState, build_thread_config
 
-START_NODE = "__start__"
-END_NODE = "__end__"
+AGENT_ORDER = ("supervisor_agent", "perception_agent", "action_planning_agent", "execution_agent")
+DETERMINISTIC_NODE_ORDER = ("kg_writer", "human_review_interrupt")
+COMPONENT_ORDER = DETERMINISTIC_NODE_ORDER
+OPERATION_MODES = ("exploration", "supervised_execution", "human_collaboration")
 
-AGENT_ORDER = (
-    "supervisor_agent",
-    "perception_agent",
-    "action_planning_agent",
-    "execution_agent",
-)
-
-COMPONENT_ORDER = (
-    "world_model_adapter",
-    "risk_gate",
-    "human_control_gate",
-    "ros2_bridge",
-    "feedback_update",
-)
+CandidateLoader = Callable[[str, list[str], dict[str, Any]], Iterable[dict[str, Any] | CandidateSnapshot]]
+PerceptionRunner = Callable[[str, WasteAgentState], dict[str, Any]]
+ExecutionRunner = Callable[[str, dict[str, Any], WasteAgentState], dict[str, Any]]
+ReviewPayloadLoader = Callable[[list[str], WasteAgentState], list[dict[str, Any]]]
+KnowledgeQueryRunner = Callable[[dict[str, Any]], dict[str, Any]]
 
 
-class WasteAgentState(TypedDict, total=False):
-    """LangGraph 共享状态。"""
+def _empty_candidates(scene_id: str, instance_ids: list[str], goal: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    return []
 
-    task_id: str
-    objective: str
-    user_intent: str
-    target_categories: list[str]
-    perception_events: list[dict[str, Any]]
-    rejected_candidates: list[dict[str, Any]]
-    knowledge_context: dict[str, Any]
-    graph_state: list[dict[str, Any]]
-    risk_assessments: list[dict[str, Any]]
-    planning_decision: dict[str, Any]
-    execution_request: dict[str, Any]
-    execution_feedback: list[dict[str, Any]]
-    human_review_requests: list[dict[str, Any]]
-    audit_trail: list[dict[str, Any]]
-    errors: list[dict[str, Any]]
-    next_node: str
+
+def _pending_perception(scene_id: str, state: WasteAgentState) -> dict[str, Any]:
+    return {"status": "pending_external_perception", "scene_id": scene_id}
+
+
+def _pending_execution(operation: str, plan: dict[str, Any], state: WasteAgentState) -> dict[str, Any]:
+    return {"execution_status": "pending_external_execution", "operation": operation, "physical_attempt_started": False}
+
+
+def _basic_review_payload(instance_ids: list[str], state: WasteAgentState) -> list[dict[str, Any]]:
+    return [{"instance_id": instance_id} for instance_id in instance_ids]
+
+
+def _missing_query_backend(goal: dict[str, Any]) -> dict[str, Any]:
+    return {"status": "unavailable", "error": "knowledge_query_backend_not_connected"}
+
+
+@dataclass(slots=True)
+class GraphRuntime:
+    """把外部感知、KG、ROS2 工具注入图中；这些服务本身不是 Agent。"""
+
+    candidate_loader: CandidateLoader = _empty_candidates
+    perception_runner: PerceptionRunner = _pending_perception
+    execution_runner: ExecutionRunner = _pending_execution
+    review_payload_loader: ReviewPayloadLoader = _basic_review_payload
+    knowledge_query_runner: KnowledgeQueryRunner = _missing_query_backend
+    kg_writer_backend: KGWriterBackend | None = None
+    executed_action_ids: set[str] = field(default_factory=set)
 
 
 NodeName = Literal[
     "supervisor_agent",
     "perception_agent",
-    "world_model_adapter",
-    "risk_gate",
     "action_planning_agent",
-    "human_control_gate",
     "execution_agent",
-    "feedback_update",
-    "no_executable_action",
+    "kg_writer",
+    "human_review_interrupt",
 ]
 
 
 def describe_graph() -> dict[str, object]:
-    """返回当前编排图结构，同时区分真正 agent 与被调用组件。"""
+    """返回六个图节点、三种模式和循环边界。"""
 
     return {
         "status": "langgraph_runtime_ready",
+        "operation_modes": list(OPERATION_MODES),
         "agents": list(AGENT_ORDER),
-        "components": list(COMPONENT_ORDER),
+        "deterministic_nodes": list(DETERMINISTIC_NODE_ORDER),
+        "components": list(DETERMINISTIC_NODE_ORDER),
         "flow": [
             "START -> supervisor_agent",
-            "supervisor_agent -> perception_agent",
-            "perception_agent -> world_model_adapter",
-            "world_model_adapter -> risk_gate",
-            "risk_gate -> action_planning_agent",
-            "action_planning_agent -> route_after_planning",
-            "route_after_planning -> human_control_gate | execution_agent | no_executable_action",
-            "human_control_gate -> feedback_update",
-            "execution_agent -> feedback_update",
-            "no_executable_action -> feedback_update",
-            "feedback_update -> END",
+            "supervisor_agent -> acquire_scene | perceive | human_review | plan | execute | complete | abort",
+            "acquire_scene -> execution_agent -> perception_agent -> kg_writer -> supervisor_agent",
+            "human_review -> human_review_interrupt -> kg_writer -> supervisor_agent",
+            "plan -> action_planning_agent -> kg_writer -> supervisor_agent",
+            "execute -> execution_agent -> kg_writer -> supervisor_agent",
+            "complete | abort -> END",
         ],
-        "decision_rule": "The KG provides category priors and current graph_state only; action_planning_agent performs feasibility filtering and computes priority_tier plus dynamic_priority_score at planning time.",
-        "hard_boundaries": {
-            "world_model_adapter": "KG state is not an agent; it projects category priors and current feasibility predicates but stores no planning score or action order.",
-            "risk_gate": "Risk and safety gating is a policy component, not an autonomous agent.",
-            "human_control_gate": "Human confirmation is an explicit control gate, not an LLM agent.",
-            "action_planning_agent": "Plans ordered actions but does not send ROS2 commands.",
-            "execution_agent": "Wraps approved plans as structured ROS2 bridge requests and never forwards free-form LLM text to the robot.",
+        "planning_rule": "One physical action per plan; re-observe and replan after every physical attempt.",
+        "state_boundary": "LangGraph stores control state and KG references only; KG stores domain facts and events.",
+    }
+
+
+def supervisor_node(state: WasteAgentState, *, runtime: GraphRuntime | None = None) -> WasteAgentState:
+    """根据三种模式和当前控制状态选择唯一下一步。"""
+
+    runtime = runtime or GraphRuntime()
+    updates: WasteAgentState = {}
+    mode = str(state.get("operation_mode", "human_collaboration"))
+    if mode not in OPERATION_MODES:
+        updates["error_message"] = f"unsupported_operation_mode={mode}"
+
+    goal = dict(state.get("user_goal", {}))
+    if mode == "exploration" and goal.get("goal_type") == "history_query" and not state.get("knowledge_query_result_ref"):
+        query_result = runtime.knowledge_query_runner(goal)
+        if query_result.get("status") == "complete" and query_result.get("result_ref"):
+            updates["knowledge_query_result_ref"] = str(query_result["result_ref"])
+            updates["task_completed"] = True
+        else:
+            updates["error_message"] = str(query_result.get("error", "knowledge_query_failed"))
+
+    merged: WasteAgentState = dict(state)
+    merged.update(updates)
+    decision = choose_supervisor_decision(merged)
+    updates.update(
+        {
+            "next_step": decision.next_step,
+            "replan_required": decision.replan_required,
+            "audit_trail": _append_audit(merged, "supervisor_agent", decision.to_dict()),
+        }
+    )
+    return updates
+
+
+def choose_supervisor_decision(state: WasteAgentState) -> SupervisorDecision:
+    """确定性路由规则约束 Supervisor，避免 LLM 绕过安全流程。"""
+
+    if state.get("error_message"):
+        return SupervisorDecision("abort", [], str(state["error_message"]), False)
+    if state.get("task_completed"):
+        return SupervisorDecision("complete", [], "The user goal is complete.", False)
+
+    mode = str(state.get("operation_mode", "human_collaboration"))
+    goal = dict(state.get("user_goal", {}))
+    if mode == "exploration" and goal.get("goal_type") == "history_query":
+        if state.get("knowledge_query_result_ref"):
+            return SupervisorDecision("complete", [], "Historical KG query completed.", False)
+        return SupervisorDecision("abort", [], "Historical KG query has no result.", False)
+
+    if not state.get("current_scene_id") or not state.get("scene_is_fresh", False):
+        return SupervisorDecision("acquire_scene", [], "A new RGB-D scene is required.", True)
+    if not state.get("perception_completed", False):
+        return SupervisorDecision("perceive", [], "The current Scene has not completed perception.", True)
+    if mode == "exploration":
+        return SupervisorDecision("complete", [], "Current environment exploration has been committed to KG.", False)
+
+    review_ids = [str(item) for item in state.get("review_instance_ids", [])]
+    if review_ids:
+        return SupervisorDecision("human_review", review_ids, "Review-required objects affect the task.", True)
+    plan = dict(state.get("current_plan", {}))
+    if plan:
+        if state.get("plan_validated", False):
+            return SupervisorDecision("execute", [str(plan.get("target_instance_id", ""))], "A validated single-step plan is ready.", False)
+        return SupervisorDecision("abort", [], "current_plan has not passed deterministic validation.", False)
+    eligible_ids = [str(item) for item in state.get("eligible_instance_ids", [])]
+    if eligible_ids:
+        return SupervisorDecision("plan", eligible_ids, "Eligible instances require a single-step plan.", True)
+    return SupervisorDecision("complete", [], "No eligible or review-required object remains.", False)
+
+
+def perception_node(state: WasteAgentState, *, runtime: GraphRuntime | None = None) -> WasteAgentState:
+    """协调外部 YOLO/VLM/D435i 子图并只生成受控 KG 写入载荷。"""
+
+    runtime = runtime or GraphRuntime()
+    scene_id = str(state.get("current_scene_id", ""))
+    result = runtime.perception_runner(scene_id, state)
+    if not result.get("perception_completed", False):
+        return {
+            "external_status": str(result.get("status", "pending_external_perception")),
+            "perception_request": dict(result),
+            "audit_trail": _append_audit(state, "perception_agent", {"status": result.get("status", "pending")}),
+        }
+    payload_keys = {
+        "scene_id",
+        "updated_instance_ids",
+        "accepted_instance_ids",
+        "review_instance_ids",
+        "unknown_instance_ids",
+        "eligible_instance_ids",
+        "events",
+        "perception_completed",
+    }
+    payload = {key: result[key] for key in payload_keys if key in result}
+    payload.setdefault("scene_id", scene_id)
+    return {
+        "external_status": "",
+        "pending_kg_write": {"write_type": "perception", "payload": payload},
+        "audit_trail": _append_audit(state, "perception_agent", {"scene_id": scene_id, "status": "completed"}),
+    }
+
+
+def action_planning_node(state: WasteAgentState, *, runtime: GraphRuntime | None = None) -> WasteAgentState:
+    """临时读取候选并生成唯一 ActionPlan，不把候选快照写进 State。"""
+
+    runtime = runtime or GraphRuntime()
+    scene_id = str(state.get("current_scene_id", ""))
+    eligible_ids = [str(item) for item in state.get("eligible_instance_ids", [])]
+    candidates = runtime.candidate_loader(scene_id, eligible_ids, dict(state.get("user_goal", {})))
+    plan = build_single_action_plan(
+        candidates,
+        scene_id=scene_id,
+        user_goal=dict(state.get("user_goal", {})),
+        scene_is_fresh=bool(state.get("scene_is_fresh", False)),
+        review_instance_ids=state.get("review_instance_ids", []),
+    ).to_dict()
+    validation_errors = validate_action_plan(
+        plan,
+        current_scene_id=scene_id,
+        scene_is_fresh=bool(state.get("scene_is_fresh", False)),
+        eligible_instance_ids=eligible_ids,
+    )
+    if validation_errors:
+        return {
+            "error_message": ";".join(validation_errors),
+            "plan_validated": False,
+            "audit_trail": _append_audit(state, "action_planning_agent", {"validation_errors": validation_errors}),
+        }
+    return {
+        "current_plan": plan,
+        "plan_validated": False,
+        "pending_kg_write": {
+            "write_type": "planning",
+            "payload": {"action_plan": plan, "planned_action": plan["action_type"], "reason": plan["reason"]},
         },
+        "audit_trail": _append_audit(state, "action_planning_agent", {"action_id": plan["action_id"], "action_type": plan["action_type"]}),
     }
 
 
-def supervisor_node(state: WasteAgentState) -> WasteAgentState:
-    """记录总体目标，并把任务交给固定的信息流。"""
+def execution_node(state: WasteAgentState, *, runtime: GraphRuntime | None = None) -> WasteAgentState:
+    """以 acquire_scene 或 execute_action 模式调用受约束外部工具。"""
 
+    runtime = runtime or GraphRuntime()
+    if state.get("next_step") == "acquire_scene":
+        result = runtime.execution_runner("acquire_scene", {}, state)
+        if result.get("execution_status") != "scene_acquired" or not result.get("scene_id"):
+            return {
+                "external_status": str(result.get("execution_status", "pending_external_execution")),
+                "execution_request": dict(result),
+                "audit_trail": _append_audit(state, "execution_agent", {"operation": "acquire_scene", "status": result.get("execution_status", "pending")}),
+            }
+        return {
+            "current_scene_id": str(result["scene_id"]),
+            "scene_is_fresh": True,
+            "perception_completed": False,
+            "external_status": "",
+            "execution_request": dict(result),
+            "audit_trail": _append_audit(state, "execution_agent", {"operation": "acquire_scene", "scene_id": result["scene_id"]}),
+        }
+
+    plan = dict(state.get("current_plan", {}))
+    validation_errors = validate_action_plan(
+        plan,
+        current_scene_id=str(state.get("current_scene_id", "")),
+        scene_is_fresh=bool(state.get("scene_is_fresh", False)),
+        eligible_instance_ids=state.get("eligible_instance_ids", []),
+    )
+    if validation_errors:
+        return {"error_message": ";".join(validation_errors), "audit_trail": _append_audit(state, "execution_agent", {"refused": validation_errors})}
+
+    action_type = str(plan.get("action_type", ""))
+    if action_type == "rescan":
+        return {"scene_is_fresh": False, "current_plan": {}, "plan_validated": False, "replan_required": True}
+    if action_type == "request_human_review":
+        return {"review_instance_ids": [str(plan.get("target_instance_id", ""))], "current_plan": {}, "plan_validated": False}
+    if action_type in {"complete", "no_action"}:
+        return {"task_completed": True, "current_plan": {}, "plan_validated": False}
+
+    action_id = str(plan.get("action_id", ""))
+    if action_id in runtime.executed_action_ids:
+        return {"error_message": f"duplicate_action_id={action_id}"}
+    result = runtime.execution_runner("execute_action", plan, state)
+    if result.get("execution_status") == "pending_external_execution":
+        return {"external_status": "pending_external_execution", "execution_request": dict(result)}
+
+    physical_started = bool(result.get("physical_attempt_started", False))
+    if not physical_started:
+        remaining = [item for item in state.get("eligible_instance_ids", []) if item != plan.get("target_instance_id")]
+        return {
+            "last_execution_result": dict(result),
+            "eligible_instance_ids": remaining,
+            "current_plan": {},
+            "plan_validated": False,
+            "replan_required": True,
+            "audit_trail": _append_audit(state, "execution_agent", {"action_id": action_id, "physical_attempt_started": False}),
+        }
+
+    if result.get("execution_status") not in {"success", "failure"}:
+        return {"error_message": "physical attempt must finish with success or failure"}
+    runtime.executed_action_ids.add(action_id)
+    execution_result = {
+        "action_id": action_id,
+        "execution_status": str(result["execution_status"]),
+        "physical_attempt_started": True,
+        "failure_reason": str(result.get("failure_reason", "")),
+        "new_scene_required": True,
+    }
     return {
-        "audit_trail": _append_audit(
-            state,
-            "supervisor_agent",
+        "external_status": "",
+        "last_execution_result": execution_result,
+        "pending_kg_write": {"write_type": "execution", "payload": {"execution_result": execution_result}},
+        "audit_trail": _append_audit(state, "execution_agent", {"action_id": action_id, "physical_attempt_started": True}),
+    }
+
+
+def human_review_interrupt_node(state: WasteAgentState, *, runtime: GraphRuntime | None = None) -> WasteAgentState:
+    """用 interrupt 暂停线程，并在恢复后生成 HumanReviewEvent 写入载荷。"""
+
+    from langgraph.types import interrupt
+
+    runtime = runtime or GraphRuntime()
+    review_ids = [str(item) for item in state.get("review_instance_ids", [])]
+    payload = {"review_instance_ids": review_ids, "objects": runtime.review_payload_loader(review_ids, state), "allowed_actions": ["confirm_existing", "mark_unknown", "approve_robot", "forbid_robot", "discard_detection"]}
+    resume_value = interrupt(payload)
+    review_results = resume_value if isinstance(resume_value, list) else [resume_value]
+    if not all(isinstance(item, dict) and item.get("review_action") in payload["allowed_actions"] for item in review_results):
+        raise ValueError("Invalid human review resume payload")
+    return {
+        "pending_kg_write": {"write_type": "human_review", "payload": {"review_results": review_results, "events": []}},
+        "audit_trail": _append_audit(state, "human_review_interrupt", {"review_count": len(review_results)}),
+    }
+
+
+def kg_writer_node(state: WasteAgentState, *, runtime: GraphRuntime | None = None) -> WasteAgentState:
+    """唯一 KG 写入口：严格校验载荷后提交，并更新控制状态。"""
+
+    runtime = runtime or GraphRuntime()
+    request = dict(state.get("pending_kg_write", {}))
+    result = commit_kg_write(request, backend=runtime.kg_writer_backend)
+    write_type = str(request.get("write_type", ""))
+    payload = dict(request.get("payload", {}))
+    updates: WasteAgentState = {"pending_kg_write": {}, "kg_write_result": result}
+    if result.get("kg_summary_ref"):
+        updates["kg_summary_ref"] = str(result["kg_summary_ref"])
+
+    if write_type == "perception":
+        updates.update(
             {
-                "objective": state.get("objective", ""),
-                "target_category_count": len(state.get("target_categories", [])),
-            },
-        )
-    }
-
-
-def perception_node(state: WasteAgentState) -> WasteAgentState:
-    """标准化外部感知输入；当前阶段不在 agent 层运行 YOLO/VLM。"""
-
-    events = [dict(item) for item in state.get("perception_events", [])]
-    rejected = [dict(item) for item in state.get("rejected_candidates", [])]
-    return {
-        "perception_events": events,
-        "rejected_candidates": rejected,
-        "audit_trail": _append_audit(state, "perception_agent", {"event_count": len(events), "rejected_count": len(rejected)}),
-    }
-
-
-def world_model_adapter_node(state: WasteAgentState) -> WasteAgentState:
-    """读取 KG 上下文并投影当前可行性状态，不计算规划优先级。"""
-
-    context = dict(state.get("knowledge_context", {}))
-    graph_state = [dict(item) for item in context.get("graph_state", state.get("graph_state", []))]
-    candidates = context.get("candidates") or state.get("perception_events", [])
-    if candidates and not context.get("candidates"):
-        context["candidates"] = [dict(item) for item in candidates]
-    return {
-        "knowledge_context": context,
-        "graph_state": graph_state,
-        "audit_trail": _append_audit(state, "world_model_adapter", {"graph_state_count": len(graph_state), "priority_source": "action_planning_agent"}),
-    }
-
-
-def risk_gate_node(state: WasteAgentState) -> WasteAgentState:
-    """基于 graph_state 做保守风险门控。"""
-
-    assessments: list[dict[str, Any]] = []
-    for item in state.get("graph_state", []):
-        graph_item = dict(item)
-        requires_review = bool(graph_item.get("requires_review", False))
-        blocked = bool(graph_item.get("blocked", False))
-        risk_level = str(graph_item.get("risk_level", "unknown"))
-        attempt_count = int(graph_item.get("attempt_count", 0) or 0)
-        recognition_status = str(graph_item.get("recognition_status", "review_required"))
-        handling_policy = str(graph_item.get("current_handling_policy", "human_confirmation_required"))
-        auto_allowed = bool(graph_item.get("can_attempt_now", False))
-        auto_allowed = (
-            auto_allowed
-            and recognition_status == "accepted"
-            and handling_policy == "auto_allowed"
-            and not requires_review
-            and not blocked
-            and attempt_count < 2
-            and risk_level not in {"high", "critical", "hazardous"}
-        )
-        reasons: list[str] = []
-        if requires_review:
-            reasons.append("requires_review")
-        if recognition_status != "accepted":
-            reasons.append(f"recognition_status={recognition_status}")
-        if handling_policy != "auto_allowed":
-            reasons.append(f"current_handling_policy={handling_policy}")
-        if blocked:
-            reasons.append("blocked")
-        if attempt_count >= 2:
-            reasons.append("attempt_count_exceeded")
-        if risk_level in {"high", "critical", "hazardous"}:
-            reasons.append("high_risk")
-        assessments.append(
-            {
-                "instance_id": str(graph_item.get("instance_id", "unknown")),
-                "risk_level": risk_level,
-                "auto_grasp_allowed": auto_allowed,
-                "requires_human_review": requires_review,
-                "risk_reasons": reasons,
+                "current_scene_id": str(payload.get("scene_id", state.get("current_scene_id", ""))),
+                "scene_is_fresh": True,
+                "perception_completed": bool(payload.get("perception_completed", True)),
+                "review_instance_ids": [str(item) for item in payload.get("review_instance_ids", [])],
+                "eligible_instance_ids": [str(item) for item in payload.get("eligible_instance_ids", [])],
+                "current_plan": {},
+                "plan_validated": False,
+                "replan_required": False,
             }
         )
-    return {
-        "risk_assessments": assessments,
-        "audit_trail": _append_audit(state, "risk_gate", {"assessment_count": len(assessments)}),
-    }
+    elif write_type == "planning":
+        updates["plan_validated"] = True
+    elif write_type == "human_review":
+        updates.update(
+            {
+                "review_instance_ids": [str(item) for item in result.get("remaining_review_instance_ids", [])],
+                "eligible_instance_ids": [str(item) for item in result.get("eligible_instance_ids", state.get("eligible_instance_ids", []))],
+                "current_plan": {},
+                "plan_validated": False,
+                "replan_required": True,
+            }
+        )
+    elif write_type == "execution":
+        updates.update(
+            {
+                "scene_is_fresh": False,
+                "perception_completed": False,
+                "eligible_instance_ids": [],
+                "current_plan": {},
+                "plan_validated": False,
+                "replan_required": True,
+            }
+        )
+    updates["audit_trail"] = _append_audit(state, "kg_writer", {"write_type": write_type, "status": result.get("status", "committed")})
+    return updates
 
 
-def action_planning_node(state: WasteAgentState) -> WasteAgentState:
-    """基于 graph_state 和风险门控动态计算优先级并生成操作序列。"""
-
-    blocked_by_risk = {
-        item["instance_id"]
-        for item in state.get("risk_assessments", [])
-        if not item.get("auto_grasp_allowed", False)
-    }
-    graph_state = []
-    for item in state.get("graph_state", []):
-        state_item = dict(item)
-        if state_item.get("instance_id") in blocked_by_risk:
-            state_item["can_attempt_now"] = False
-            reasons = list(state_item.get("feasibility_reasons", []))
-            if "risk_gate_blocked" not in reasons:
-                reasons.append("risk_gate_blocked")
-            state_item["feasibility_reasons"] = reasons
-        graph_state.append(state_item)
-    decision = build_ordered_plan(
-        graph_state,
-        objective=str(state.get("objective", "")),
-    )
-    return {
-        "graph_state": graph_state,
-        "planning_decision": _to_plain_dict(decision),
-        "audit_trail": _append_audit(state, "action_planning_agent", {"step_count": len(decision.steps), "deferred_count": len(decision.deferred)}),
-    }
+def route_after_supervisor(state: WasteAgentState) -> str:
+    return str(state.get("next_step", "abort"))
 
 
-def route_after_planning(state: WasteAgentState) -> NodeName:
-    """LangGraph 条件边：先处理人工确认，再执行可自动动作。"""
-
-    if any(item.get("requires_human_review") for item in state.get("risk_assessments", [])):
-        return "human_control_gate"
-    if state.get("planning_decision", {}).get("steps"):
-        return "execution_agent"
-    return "no_executable_action"
-
-
-def human_control_gate_node(state: WasteAgentState) -> WasteAgentState:
-    """形成人工复核请求，等待 UI 或人工确认回写。"""
-
-    requests = []
-    for item in state.get("risk_assessments", []):
-        if item.get("requires_human_review"):
-            requests.append(
-                {
-                    "instance_id": item.get("instance_id"),
-                    "reason": item.get("risk_reasons", ["requires_human_review"]),
-                    "status": "pending_human_review",
-                }
-            )
-    return {
-        "next_node": "human_control_gate",
-        "human_review_requests": requests,
-        "audit_trail": _append_audit(state, "human_control_gate", {"request_count": len(requests)}),
-    }
+def route_after_execution(state: WasteAgentState) -> str:
+    if state.get("external_status"):
+        return "end"
+    if state.get("pending_kg_write"):
+        return "kg_writer"
+    if state.get("execution_request", {}).get("execution_status") == "scene_acquired":
+        return "perception_agent"
+    if state.get("scene_is_fresh") and not state.get("perception_completed") and state.get("next_step") == "acquire_scene":
+        return "perception_agent"
+    return "supervisor_agent"
 
 
-def execution_node(state: WasteAgentState) -> WasteAgentState:
-    """把已批准计划封装为 ROS2 bridge 请求；当前不启动 ROS2。"""
-
-    steps = state.get("planning_decision", {}).get("steps", [])
-    if not steps:
-        return {
-            "next_node": "execution_agent",
-            "execution_request": {"status": "skipped", "bridge": "ros2_bridge", "reason": "no_plan_step"},
-            "audit_trail": _append_audit(state, "execution_agent", {"status": "skipped"}),
-        }
-    first_step = dict(steps[0])
-    return {
-        "next_node": "execution_agent",
-        "execution_request": {
-            "status": "pending_ros2_bridge",
-            "bridge": "ros2_bridge",
-            "action_type": first_step.get("action_type"),
-            "target_instance_id": first_step.get("target_instance_id"),
-            "parameters": {
-                "preconditions": first_step.get("preconditions", []),
-                "failure_recovery": first_step.get("failure_recovery"),
-            },
-            "requires_confirmation": False,
-        },
-        "audit_trail": _append_audit(state, "execution_agent", {"target": first_step.get("target_instance_id"), "bridge": "ros2_bridge"}),
-    }
+def route_after_perception(state: WasteAgentState) -> str:
+    return "kg_writer" if state.get("pending_kg_write") else "end"
 
 
-def no_executable_action_node(state: WasteAgentState) -> WasteAgentState:
-    """没有可执行动作时保留可追踪状态，而不是生成空白计划。"""
+def build_langgraph_app(*, runtime: GraphRuntime | None = None, checkpointer: Any | None = None) -> Any:
+    """构建带 checkpointer、条件路由和人工 interrupt 的真实 LangGraph。"""
 
-    return {
-        "next_node": "no_executable_action",
-        "execution_request": {"status": "skipped", "bridge": "ros2_bridge", "reason": "no_executable_action"},
-        "audit_trail": _append_audit(state, "no_executable_action", {}),
-    }
+    from langgraph.checkpoint.memory import InMemorySaver
+    from langgraph.graph import END, START, StateGraph
 
-
-def feedback_update_node(state: WasteAgentState) -> WasteAgentState:
-    """将执行或人工复核状态整理为未来 KG 回写入口。"""
-
-    feedback = [dict(item) for item in state.get("execution_feedback", [])]
-    if state.get("execution_request"):
-        feedback.append({"source": "agent_graph", "execution_request": dict(state["execution_request"])})
-    if state.get("human_review_requests"):
-        feedback.append({"source": "human_control_gate", "requests": list(state["human_review_requests"])})
-    return {
-        "execution_feedback": feedback,
-        "audit_trail": _append_audit(state, "feedback_update", {"feedback_count": len(feedback)}),
-    }
-
-
-def build_langgraph_app() -> Any:
-    """构建真实 LangGraph app；未安装 langgraph 时给出明确错误。"""
-
-    try:
-        from langgraph.graph import END, START, StateGraph
-    except ImportError as exc:
-        raise RuntimeError("langgraph is not installed. Install it with: python -m pip install langgraph") from exc
-
+    runtime = runtime or GraphRuntime()
+    checkpointer = checkpointer or InMemorySaver()
     graph = StateGraph(WasteAgentState)
-    graph.add_node("supervisor_agent", supervisor_node)
-    graph.add_node("perception_agent", perception_node)
-    graph.add_node("world_model_adapter", world_model_adapter_node)
-    graph.add_node("risk_gate", risk_gate_node)
-    graph.add_node("action_planning_agent", action_planning_node)
-    graph.add_node("human_control_gate", human_control_gate_node)
-    graph.add_node("execution_agent", execution_node)
-    graph.add_node("no_executable_action", no_executable_action_node)
-    graph.add_node("feedback_update", feedback_update_node)
+    graph.add_node("supervisor_agent", lambda state: supervisor_node(state, runtime=runtime))
+    graph.add_node("perception_agent", lambda state: perception_node(state, runtime=runtime))
+    graph.add_node("action_planning_agent", lambda state: action_planning_node(state, runtime=runtime))
+    graph.add_node("execution_agent", lambda state: execution_node(state, runtime=runtime))
+    graph.add_node("kg_writer", lambda state: kg_writer_node(state, runtime=runtime))
+    graph.add_node("human_review_interrupt", lambda state: human_review_interrupt_node(state, runtime=runtime))
 
     graph.add_edge(START, "supervisor_agent")
-    graph.add_edge("supervisor_agent", "perception_agent")
-    graph.add_edge("perception_agent", "world_model_adapter")
-    graph.add_edge("world_model_adapter", "risk_gate")
-    graph.add_edge("risk_gate", "action_planning_agent")
     graph.add_conditional_edges(
-        "action_planning_agent",
-        route_after_planning,
+        "supervisor_agent",
+        route_after_supervisor,
         {
-            "human_control_gate": "human_control_gate",
-            "execution_agent": "execution_agent",
-            "no_executable_action": "no_executable_action",
+            "acquire_scene": "execution_agent",
+            "perceive": "perception_agent",
+            "human_review": "human_review_interrupt",
+            "plan": "action_planning_agent",
+            "execute": "execution_agent",
+            "complete": END,
+            "abort": END,
         },
     )
-    graph.add_edge("human_control_gate", "feedback_update")
-    graph.add_edge("execution_agent", "feedback_update")
-    graph.add_edge("no_executable_action", "feedback_update")
-    graph.add_edge("feedback_update", END)
-    return graph.compile()
+    graph.add_conditional_edges("execution_agent", route_after_execution, {"perception_agent": "perception_agent", "kg_writer": "kg_writer", "supervisor_agent": "supervisor_agent", "end": END})
+    graph.add_conditional_edges("perception_agent", route_after_perception, {"kg_writer": "kg_writer", "end": END})
+    graph.add_edge("action_planning_agent", "kg_writer")
+    graph.add_edge("human_review_interrupt", "kg_writer")
+    graph.add_edge("kg_writer", "supervisor_agent")
+    return graph.compile(checkpointer=checkpointer)
 
 
-def run_dry_graph(initial_state: WasteAgentState) -> WasteAgentState:
-    """不依赖 LangGraph 的顺序执行版本，用于单元测试和无依赖环境。"""
+def run_supervisor_step(initial_state: WasteAgentState, *, runtime: GraphRuntime | None = None) -> WasteAgentState:
+    """不执行外部副作用，只运行一次 Supervisor 决策，供单元测试使用。"""
 
     state: WasteAgentState = dict(initial_state)
-    for node in (supervisor_node, perception_node, world_model_adapter_node, risk_gate_node, action_planning_node):
-        state.update(node(state))
-    next_node = route_after_planning(state)
-    state["next_node"] = next_node
-    branch: dict[NodeName, Callable[[WasteAgentState], WasteAgentState]] = {
-        "human_control_gate": human_control_gate_node,
-        "execution_agent": execution_node,
-        "no_executable_action": no_executable_action_node,
-    }
-    state.update(branch[next_node](state))
-    state.update(feedback_update_node(state))
+    state.update(supervisor_node(state, runtime=runtime))
     return state
-
-
-# 旧名称保留为兼容别名；新代码应使用 world_model_adapter/risk_gate/action_planning/human_control。
-knowledge_node = world_model_adapter_node
-risk_node = risk_gate_node
-planning_node = action_planning_node
-human_review_node = human_control_gate_node
 
 
 def _append_audit(state: WasteAgentState, node: str, summary: dict[str, Any]) -> list[dict[str, Any]]:
@@ -365,13 +442,6 @@ def _append_audit(state: WasteAgentState, node: str, summary: dict[str, Any]) ->
     return trail
 
 
-def _to_plain_dict(value: Any) -> dict[str, Any]:
-    if is_dataclass(value):
-        return asdict(value)
-    if isinstance(value, dict):
-        return dict(value)
-    raise TypeError(f"Cannot convert {type(value)!r} to dict")
-
-
 if __name__ == "__main__":
     print(describe_graph())
+    print(build_thread_config("demo-thread"))

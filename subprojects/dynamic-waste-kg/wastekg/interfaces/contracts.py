@@ -103,6 +103,7 @@ class VisionPacket:
 class PlannerRequest:
     task_id: str
     objective: str
+    operation_mode: str = "human_collaboration"
     target_categories: List[str] = field(default_factory=list)
     max_candidates: int = 10
     human_confirmation_required: bool = True
@@ -123,6 +124,7 @@ class ExecutionFeedback:
     action_id: str
     target_instance_id: str
     status: str
+    physical_attempt_started: bool = False
     message: str = ""
     observed_changes: Dict[str, Any] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -188,7 +190,7 @@ def vision_packet_to_observation(packet: VisionPacket) -> Observation:
         metadata=dict(packet.metadata),
     )
 
-# 为 LangGraph 多智能体层组装只读规划上下文。
+# 为 LangGraph 多智能体层组装线程级控制状态，不复制完整 KG。
 def build_langgraph_state(graph: KnowledgeGraph, request: Optional[PlannerRequest] = None) -> Dict[str, Any]:
     request = request or PlannerRequest(task_id=f"task_{uuid4().hex[:8]}", objective="unassigned")
     planning_context = build_planning_context(
@@ -201,17 +203,30 @@ def build_langgraph_state(graph: KnowledgeGraph, request: Optional[PlannerReques
             "human_confirmation_required": request.human_confirmation_required,
         },
     )
+    if request.operation_mode not in {"exploration", "supervised_execution", "human_collaboration"}:
+        raise ValueError(f"Unsupported operation_mode: {request.operation_mode}")
+    current_scene_id = next(reversed(graph.scenes), "")
+    review_ids = [str(item["instance_id"]) for item in planning_context["review_required"]]
     return {
-        "request": {
-            "task_id": request.task_id,
+        "task_id": request.task_id,
+        "operation_mode": request.operation_mode,
+        "user_goal": {
+            "goal_type": str(request.metadata.get("goal_type", "sort")),
             "objective": request.objective,
             "target_categories": list(request.target_categories),
-            "max_candidates": request.max_candidates,
             "human_confirmation_required": request.human_confirmation_required,
-            "metadata": dict(request.metadata),
         },
-        "planning_context": planning_context,
-        "long_term_knowledge": {name: spec.to_dict() for name, spec in graph.categories.items()},
+        "current_scene_id": current_scene_id,
+        "scene_is_fresh": bool(current_scene_id),
+        "perception_completed": bool(current_scene_id),
+        "review_instance_ids": review_ids,
+        "eligible_instance_ids": list(planning_context["eligible_instance_ids"]),
+        "current_plan": {},
+        "plan_validated": False,
+        "replan_required": True,
+        "task_completed": False,
+        "error_message": "",
+        "kg_summary_ref": f"kg://scene/{current_scene_id}" if current_scene_id else "kg://empty",
     }
 
 
@@ -228,12 +243,23 @@ def build_ros2_action_command(action_type: str, target_instance_id: str, paramet
 def apply_execution_feedback(graph: KnowledgeGraph, feedback: ExecutionFeedback) -> Dict[str, Any]:
     # 只有真实机械臂执行才增加 attempt_count，并生成 ExecutionEvent。
     status = feedback.status.lower()
+    if not feedback.physical_attempt_started:
+        return {
+            "action_id": feedback.action_id,
+            "target_instance_id": feedback.target_instance_id,
+            "status": feedback.status,
+            "event_recorded": False,
+        }
+    if status not in {"success", "failure", "failed"}:
+        raise ValueError("A physical attempt must finish with success or failure")
     result = "success" if status == "success" else "failure"
     instance = graph.instances[feedback.target_instance_id]
     scene_id = str(feedback.metadata.get("scene_id") or instance.last_seen_scene or "scene_unknown")
     graph.record_execution_event(
         scene_id,
         feedback.target_instance_id,
+        action_id=feedback.action_id,
+        physical_attempt_started=True,
         execution_result=result,
         failure_reason="" if result == "success" else (feedback.message or status),
     )
@@ -241,4 +267,5 @@ def apply_execution_feedback(graph: KnowledgeGraph, feedback: ExecutionFeedback)
         "action_id": feedback.action_id,
         "target_instance_id": feedback.target_instance_id,
         "status": feedback.status,
+        "event_recorded": True,
     }

@@ -11,21 +11,22 @@
 - `action_planning_agent`：操作序列规划与失败恢复策略。
 - `execution_agent`：结构化 ROS2 bridge 请求封装与反馈整理。
 
-以下不是 agent，而是被 agent 调用或读取的系统组件：
+图中只有两个非智能体节点：
 
-- `dynamic-waste-kg` / `world_model_adapter`：知识图谱状态适配层，不是独立智能体。
-- `risk_gate`：风险、复核和自动执行门控。
-- `human_control_gate`：人工确认入口。
-- `ros2_bridge`：ROS2/PiPER 结构化接口适配层。
-- `feedback_update`：执行反馈和人工确认结果的 KG 回写入口。
+- `kg_writer`：严格校验结构化载荷后统一写 KG，不调用 LLM。
+- `human_review_interrupt`：使用 `interrupt()` 暂停并等待 `Command(resume=...)`。
+
+KG 查询、资格校验、ROS2 bridge、相机和模型运行时属于工具或服务，不额外包装成图节点。
 
 ## 决策边界
 
 - 知识图谱不保存 `task_value`、规划优先级、评分或动作顺序。
-- `graph_state` 只携带长期类别先验、当前实例状态、约束和可行性。
-- `action_planning_agent` 必须先读取 `graph_state` 和 `risk_assessments` 做硬过滤，再在规划期动态计算 `priority_tier` 与 `dynamic_priority_score`。
-- `can_attempt_now=false` 的对象只能延后、复核、解除阻塞或等待反馈更新，不能直接执行。
+- LangGraph State 只保存控制信息和 KG 引用，不复制完整 `graph_state`。
+- `action_planning_agent` 通过只读 loader 临时读取候选，先做硬过滤，再按字典序只选择一个动作。
+- 第一阶段禁止人工加权和历史统计评分；`rank_candidates` 只保留接口。
+- `failed` 对象必须先形成新 Scene，重新观测后恢复为 `pending` 才能再次规划。
 - `execution_agent` 只能发送结构化 ROS2 bridge 请求，不得把 LLM 自由文本发给机器人。
+- 只有真实物理动作开始后才增加 `attempt_count`；同一 `action_id` 必须幂等。
 
 ## 运行约束
 

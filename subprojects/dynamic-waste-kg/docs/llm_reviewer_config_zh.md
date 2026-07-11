@@ -151,10 +151,10 @@ VLM 只负责结构化视觉属性抽取和一致性校验，不直接替代 YOL
 ```text
 YOLO 输出类别和置信度
   -> 0.30 <= conf < 0.75 触发 VLM 属性一致性校验
-  -> 0.05 <= conf < 0.30 进入 unknown/人工复核；conf < 0.05 不进入候选池
+  -> 0.05 <= conf < 0.30 设置 review_required 并等待人工复核；conf < 0.05 不进入候选池
   -> VLM 提取颜色、透明度、光泽、纹理、边缘和形状线索
   -> VLM 判断这些属性是否支持 YOLO 类别假设
-  -> 证据不足或冲突时进入 uncertain/unknown
+  -> 低置信度或复核工具失败时进入 review_required；VLM conflict 时进入 unknown
 ```
 
 硅基流动接口中，项目会自动为 `api.siliconflow.cn` 使用：

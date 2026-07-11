@@ -155,7 +155,7 @@ class PerceptionPipelineTests(unittest.TestCase):
         self.assertEqual(instance.recognition_status, "unknown")
         self.assertEqual(instance.current_handling_policy, "robot_forbidden")
 
-    def test_very_low_confidence_detection_becomes_unknown_without_llm_review(self) -> None:
+    def test_low_confidence_detection_requires_review_without_becoming_unknown(self) -> None:
         records = build_records_with_optional_review(
             [{"temp_id": "d1", "yolo_class_name": "brick", "yolo_confidence": 0.20}],
             reviewer=FakeReviewer(),
@@ -163,8 +163,8 @@ class PerceptionPipelineTests(unittest.TestCase):
 
         self.assertEqual(records[0]["yolo_class_name"], "brick")
         self.assertTrue(records[0]["metadata"]["need_human_review"])
-        self.assertEqual(records[0]["metadata"]["review_decision"], "unknown")
-        self.assertEqual(records[0]["metadata"]["recognition_status"], "unknown")
+        self.assertEqual(records[0]["metadata"]["review_decision"], "not_checked")
+        self.assertEqual(records[0]["metadata"]["recognition_status"], "review_required")
         self.assertEqual(records[0]["metadata"]["original_yolo_class_name"], "brick")
 
 

@@ -363,7 +363,7 @@
   "scenes": {
     "demo_frame_001": {
       "scene_id": "demo_frame_001",
-      "captured_at": "2026-07-10T18:04:25.780038+00:00",
+      "captured_at": "2026-07-10T19:59:54.317013+00:00",
       "rgb_ref": "demo/rgb_001.png",
       "depth_ref": "demo/depth_001.png"
     }
@@ -493,17 +493,17 @@
       "target_id": "brick"
     },
     {
-      "source_id": "evt_1b043a5514a1",
+      "source_id": "evt_b895cef78f01",
       "relation": "IN_SCENE",
       "target_id": "demo_frame_001"
     },
     {
-      "source_id": "evt_1b043a5514a1",
+      "source_id": "evt_b895cef78f01",
       "relation": "DETECTED",
       "target_id": "brick_01"
     },
     {
-      "source_id": "evt_1b043a5514a1",
+      "source_id": "evt_b895cef78f01",
       "relation": "PROPOSED",
       "target_id": "brick"
     },
@@ -513,12 +513,12 @@
       "target_id": "brick"
     },
     {
-      "source_id": "evt_6bbc72ccec09",
+      "source_id": "evt_5889eed5d8cd",
       "relation": "IN_SCENE",
       "target_id": "demo_frame_001"
     },
     {
-      "source_id": "evt_6bbc72ccec09",
+      "source_id": "evt_5889eed5d8cd",
       "relation": "UPDATES",
       "target_id": "brick_01"
     },
@@ -533,17 +533,17 @@
       "target_id": "glass"
     },
     {
-      "source_id": "evt_c87dfc48fae5",
+      "source_id": "evt_cd3abe5fb0bd",
       "relation": "IN_SCENE",
       "target_id": "demo_frame_001"
     },
     {
-      "source_id": "evt_c87dfc48fae5",
+      "source_id": "evt_cd3abe5fb0bd",
       "relation": "DETECTED",
       "target_id": "glass_01"
     },
     {
-      "source_id": "evt_c87dfc48fae5",
+      "source_id": "evt_cd3abe5fb0bd",
       "relation": "PROPOSED",
       "target_id": "glass"
     },
@@ -553,12 +553,12 @@
       "target_id": "glass"
     },
     {
-      "source_id": "evt_c80dbd91a29c",
+      "source_id": "evt_1a7b2aebdf15",
       "relation": "IN_SCENE",
       "target_id": "demo_frame_001"
     },
     {
-      "source_id": "evt_c80dbd91a29c",
+      "source_id": "evt_1a7b2aebdf15",
       "relation": "UPDATES",
       "target_id": "glass_01"
     },
@@ -573,17 +573,17 @@
       "target_id": "metal"
     },
     {
-      "source_id": "evt_3ff2e9414df4",
+      "source_id": "evt_259ae7114e4c",
       "relation": "IN_SCENE",
       "target_id": "demo_frame_001"
     },
     {
-      "source_id": "evt_3ff2e9414df4",
+      "source_id": "evt_259ae7114e4c",
       "relation": "DETECTED",
       "target_id": "metal_01"
     },
     {
-      "source_id": "evt_3ff2e9414df4",
+      "source_id": "evt_259ae7114e4c",
       "relation": "PROPOSED",
       "target_id": "metal"
     },
@@ -593,12 +593,12 @@
       "target_id": "metal"
     },
     {
-      "source_id": "evt_0c13af64ada4",
+      "source_id": "evt_4be21563db2d",
       "relation": "IN_SCENE",
       "target_id": "demo_frame_001"
     },
     {
-      "source_id": "evt_0c13af64ada4",
+      "source_id": "evt_4be21563db2d",
       "relation": "UPDATES",
       "target_id": "metal_01"
     },
@@ -613,17 +613,17 @@
       "target_id": "foam"
     },
     {
-      "source_id": "evt_b4847a1cbfc4",
+      "source_id": "evt_3de078ee4c55",
       "relation": "IN_SCENE",
       "target_id": "demo_frame_001"
     },
     {
-      "source_id": "evt_b4847a1cbfc4",
+      "source_id": "evt_3de078ee4c55",
       "relation": "DETECTED",
       "target_id": "unknown_01"
     },
     {
-      "source_id": "evt_b4847a1cbfc4",
+      "source_id": "evt_3de078ee4c55",
       "relation": "PROPOSED",
       "target_id": "foam"
     },
@@ -633,12 +633,12 @@
       "target_id": "unknown_sample_001"
     },
     {
-      "source_id": "evt_1f9f53d21c73",
+      "source_id": "evt_42cfe642de61",
       "relation": "IN_SCENE",
       "target_id": "demo_frame_001"
     },
     {
-      "source_id": "evt_1f9f53d21c73",
+      "source_id": "evt_42cfe642de61",
       "relation": "UPDATES",
       "target_id": "unknown_01"
     },
@@ -675,9 +675,9 @@
   ],
   "events": [
     {
-      "event_id": "evt_1b043a5514a1",
+      "event_id": "evt_b895cef78f01",
       "event_type": "DetectionEvent",
-      "event_time": "2026-07-10T18:04:25.780102+00:00",
+      "event_time": "2026-07-10T19:59:54.317083+00:00",
       "event_source": "yolo_detector",
       "yolo_confidence": 0.96,
       "bbox_2d": null,
@@ -685,9 +685,9 @@
       "crop_ref": ""
     },
     {
-      "event_id": "evt_6bbc72ccec09",
+      "event_id": "evt_5889eed5d8cd",
       "event_type": "DepthUpdateEvent",
-      "event_time": "2026-07-10T18:04:25.780138+00:00",
+      "event_time": "2026-07-10T19:59:54.317120+00:00",
       "event_source": "depth_processor",
       "center_xyz_camera": [
         0.1,
@@ -703,9 +703,9 @@
       "occlusion_state": "none"
     },
     {
-      "event_id": "evt_c87dfc48fae5",
+      "event_id": "evt_cd3abe5fb0bd",
       "event_type": "DetectionEvent",
-      "event_time": "2026-07-10T18:04:25.780180+00:00",
+      "event_time": "2026-07-10T19:59:54.317164+00:00",
       "event_source": "yolo_detector",
       "yolo_confidence": 0.91,
       "bbox_2d": null,
@@ -713,9 +713,9 @@
       "crop_ref": ""
     },
     {
-      "event_id": "evt_c80dbd91a29c",
+      "event_id": "evt_1a7b2aebdf15",
       "event_type": "DepthUpdateEvent",
-      "event_time": "2026-07-10T18:04:25.780195+00:00",
+      "event_time": "2026-07-10T19:59:54.317180+00:00",
       "event_source": "depth_processor",
       "center_xyz_camera": [
         0.11,
@@ -731,9 +731,9 @@
       "occlusion_state": "partial"
     },
     {
-      "event_id": "evt_3ff2e9414df4",
+      "event_id": "evt_259ae7114e4c",
       "event_type": "DetectionEvent",
-      "event_time": "2026-07-10T18:04:25.780220+00:00",
+      "event_time": "2026-07-10T19:59:54.317208+00:00",
       "event_source": "yolo_detector",
       "yolo_confidence": 0.88,
       "bbox_2d": null,
@@ -741,9 +741,9 @@
       "crop_ref": ""
     },
     {
-      "event_id": "evt_0c13af64ada4",
+      "event_id": "evt_4be21563db2d",
       "event_type": "DepthUpdateEvent",
-      "event_time": "2026-07-10T18:04:25.780243+00:00",
+      "event_time": "2026-07-10T19:59:54.317220+00:00",
       "event_source": "depth_processor",
       "center_xyz_camera": [
         0.3,
@@ -759,9 +759,9 @@
       "occlusion_state": "none"
     },
     {
-      "event_id": "evt_b4847a1cbfc4",
+      "event_id": "evt_3de078ee4c55",
       "event_type": "DetectionEvent",
-      "event_time": "2026-07-10T18:04:25.780267+00:00",
+      "event_time": "2026-07-10T19:59:54.317244+00:00",
       "event_source": "yolo_detector",
       "yolo_confidence": 0.11,
       "bbox_2d": null,
@@ -769,9 +769,9 @@
       "crop_ref": ""
     },
     {
-      "event_id": "evt_1f9f53d21c73",
+      "event_id": "evt_42cfe642de61",
       "event_type": "DepthUpdateEvent",
-      "event_time": "2026-07-10T18:04:25.780297+00:00",
+      "event_time": "2026-07-10T19:59:54.317264+00:00",
       "event_source": "depth_processor",
       "center_xyz_camera": [
         0.23,

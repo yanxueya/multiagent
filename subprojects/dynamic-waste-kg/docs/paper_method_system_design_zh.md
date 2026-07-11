@@ -634,7 +634,7 @@ LLM_MAX_TOKENS=400
 ```text
 YOLO conf >= 0.75 且非强复核类别：保留为已知候选，但仍受 KG 处理规则约束
 0.30 <= YOLO conf < 0.75：触发 VLM 属性一致性校验
-0.05 <= YOLO conf < 0.30：不接受类别，进入 unknown/人工复核；YOLO conf < 0.05 不进入候选池
+0.05 <= YOLO conf < 0.30：不接受类别，设置 review_required 并进入人工复核；YOLO conf < 0.05 不进入候选池
 VLM 与 YOLO 假设冲突或证据不足：进入 uncertain/unknown
 ```
 

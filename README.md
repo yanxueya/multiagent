@@ -40,14 +40,16 @@ multiagent/
 行动规划智能体：动态计算优先级，决定先后顺序和失败恢复
 ```
 
-知识图谱维护长期类别属性、短期实例、关系和追加式事件。处理优先级与评分不保存到知识图谱；规划器先用 `graph_state` 排除当前不可执行对象，再根据任务目标、YOLO 证据、处理权限和 `attempt_count` 计算动态优先级，生成动作顺序与失败恢复策略。
+知识图谱维护长期类别属性、短期实例、关系和追加式事件。LangGraph State 只保存任务控制字段和 KG 引用。第一阶段规划器先做硬约束过滤，再按深度有效率、抓取先验、NEAR 数量、运动距离和尝试次数进行字典序比较，每次只生成一个动作。
 ## 分层关系
 
 ```text
 dynamic-waste-ui
   -> dynamic-waste-agent
-      -> action_planning_agent
-      -> dynamic-waste-kg graph_state
+      -> supervisor_agent（三模式条件路由）
+      -> perception_agent / action_planning_agent / execution_agent
+      -> kg_writer / human_review_interrupt
+      -> dynamic-waste-kg
       -> dynamic-waste-ros2
           -> robot / sensors
       -> dynamic-waste-sim

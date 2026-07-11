@@ -1,31 +1,46 @@
-# 提示词与组件说明索引
+# 多智能体 Prompt 与确定性契约
 
-本目录明确区分“智能体 prompt”和“非智能体系统组件说明”。
-
-## 真正的智能体
+本目录严格区分 Agent Prompt、非智能体图节点契约和专用模型 Prompt。
 
 ```text
-agents/supervisor.md         # 总体规划与调度
-agents/perception.md         # 感知组织
-agents/action_planning.md    # 行动规划
-agents/execution.md          # 执行封装
+prompts/
+  agents/
+    supervisor.md          # 三模式条件路由
+    perception.md          # YOLO/VLM/D435i 感知组织
+    action_planning.md     # 单步规划与字典序
+    execution.md           # 相机采集与受约束动作执行
+  components/
+    kg_writer.md           # 确定性 KG 写入契约，不调用 LLM
+    human_review_interrupt.md  # interrupt/Command(resume) 契约
+  modules/
+    vlm_reviewer.md        # 六项视觉属性一致性复核
 ```
 
-## 非智能体组件
+当前图只有：
 
 ```text
-components/world_model_adapter.md  # KG 状态适配；文件名保留为内部兼容名
-components/risk_gate.md            # 风险与安全门控
-components/human_control_gate.md   # 人工控制门控
+4 个 Agent
+  supervisor_agent
+  perception_agent
+  action_planning_agent
+  execution_agent
+
+2 个确定性节点
+  kg_writer
+  human_review_interrupt
 ```
 
-## 核心边界
+KG 查询、候选加载、资格校验、相机、YOLO、VLM、D435i、MoveIt 和 ROS2 bridge 都是 Agent 调用的工具或服务，不额外包装成图节点。
+
+核心闭环：
 
 ```text
-KG：保存长期类别知识、短期实例状态、关系和事件日志，不保存规划评分。
-action_planning_agent：先按 graph_state 过滤不可执行对象，再动态计算优先级并生成操作顺序和失败恢复。
-human_control_gate：处理人工确认，不是 LLM agent。
-execution_agent：只封装经过批准的 ROS2 bridge 结构化请求。
+Execute one action
+  -> acquire a new Scene
+  -> perceive
+  -> KG Writer
+  -> Supervisor
+  -> plan one action again
 ```
 
-`unknown` 是短期状态，不是长期类别。`priority_tier` 和 `dynamic_priority_score` 只属于规划输出，不写入 KG。
+旧的根级 Prompt 兼容文件已删除，避免重复入口和错误引用。

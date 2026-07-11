@@ -16,7 +16,6 @@ class PerceptionPolicy:
     proposal_confidence: float = 0.05
     review_confidence: float = 0.30
     accept_confidence: float = 0.75
-    unknown_confidence: float = 0.30
     review_categories: set[str] = field(default_factory=lambda: {"glass", "gypsum_board"})
     accept_thresholds: Dict[str, float] = field(default_factory=dict)
 
@@ -29,9 +28,9 @@ class PerceptionPolicy:
         accept_threshold = self.accept_thresholds.get(canonical, self.accept_confidence)
         return canonical in self.review_categories or self.review_confidence <= confidence < accept_threshold
 
-    def should_be_unknown(self, class_name: str, confidence: float) -> bool:
+    def requires_low_confidence_review(self, class_name: str, confidence: float) -> bool:
         canonical = canonicalize_category_name(class_name)
-        return canonical == UNKNOWN_CATEGORY or self.proposal_confidence <= confidence < self.unknown_confidence
+        return canonical != UNKNOWN_CATEGORY and self.proposal_confidence <= confidence < self.review_confidence
 
 
 @dataclass(slots=True)
@@ -74,7 +73,7 @@ def build_records_with_optional_review(
         if yolo_confidence < policy.proposal_confidence:
             continue
 
-        if policy.should_be_unknown(yolo_class_name, yolo_confidence):
+        if policy.requires_low_confidence_review(yolo_class_name, yolo_confidence):
             record["llm_class_name"] = ""
             record["llm_confidence"] = 0.0
             record["risk_hint"] = "unknown"
@@ -82,9 +81,9 @@ def build_records_with_optional_review(
             record["metadata"].update(
                 {
                     "need_human_review": True,
-                    "review_decision": "unknown",
-                    "recognition_status": "unknown",
-                    "unknown_reason": f"yolo_confidence<{policy.unknown_confidence:.2f}",
+                    "review_decision": "not_checked",
+                    "recognition_status": "review_required",
+                    "review_reason": f"yolo_confidence<{policy.review_confidence:.2f}",
                     "original_yolo_class_name": yolo_class_name,
                 }
             )

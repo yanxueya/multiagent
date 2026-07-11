@@ -41,6 +41,7 @@ import {
   getConnectedGraphNodeIds,
   resolveInstanceIdFromGraphNode,
   type DashboardView,
+  type OperationMode,
   type ReviewQueueItem,
   type WasteInstance,
 } from "./lib/dashboard";
@@ -55,11 +56,18 @@ const navItems: Array<{ id: DashboardView; label: string; icon: LucideIcon }> = 
   { id: "ros2", label: "ROS2 桥接", icon: Send },
 ];
 
+const modeOptions: Array<{ id: OperationMode; label: string }> = [
+  { id: "exploration", label: "环境探查" },
+  { id: "supervised_execution", label: "监督执行" },
+  { id: "human_collaboration", label: "人机协同" },
+];
+
 export default function App() {
   const requestedView = new URLSearchParams(window.location.search).get("view") as DashboardView | null;
   const [activeView, setActiveView] = useState<DashboardView>(navItems.some((item) => item.id === requestedView) ? requestedView! : "overview");
   const [selectedAgentId, setSelectedAgentId] = useState("supervisor");
-  const [selectedRunId, setSelectedRunId] = useState("risk_gate");
+  const [selectedRunId, setSelectedRunId] = useState("human_review_interrupt");
+  const [operationMode, setOperationMode] = useState<OperationMode>("human_collaboration");
   const [selectedInstanceId, setSelectedInstanceId] = useState("glass_02");
   const [selectedGraphNodeId, setSelectedGraphNodeId] = useState("glass_02");
   const [reviewAction, setReviewAction] = useState("等待人工确认");
@@ -159,6 +167,11 @@ export default function App() {
             <p className="eyebrow">DYNAMIC WASTE CONTROL</p>
             <h1>建筑废弃物分拣控制台</h1>
           </div>
+          <div className="mode-switch" aria-label="运行模式">
+            {modeOptions.map((mode) => (
+              <button key={mode.id} className={operationMode === mode.id ? "active" : ""} onClick={() => setOperationMode(mode.id)} type="button">{mode.label}</button>
+            ))}
+          </div>
           <div className="status-strip" aria-label="系统状态">
             <StatusPill icon={Radar} label={runStatus.task} tone="teal" />
             <StatusPill icon={Eye} label={runStatus.camera} tone="green" />
@@ -175,6 +188,7 @@ export default function App() {
               onSelectAgent={setSelectedAgentId}
               kgLoadStatus={kgLoadStatus}
               onOpenView={setActiveView}
+              operationMode={operationMode}
             />
           )}
           {activeView === "trace" && <TraceWorkspace selectedRun={selectedRun} onSelectRun={setSelectedRunId} onSelectInstance={selectInstance} />}
@@ -224,16 +238,18 @@ function OverviewWorkspace({
   selectInstance,
   kgLoadStatus,
   onOpenView,
+  operationMode,
 }: WorkspaceDataProps & {
   selectedAgent: AgentTraceNode;
   onSelectAgent: (id: string) => void;
   kgLoadStatus: "loading" | "loaded" | "fallback";
   onOpenView: (view: DashboardView) => void;
+  operationMode: OperationMode;
 }) {
   return (
     <div className="overview-layout">
-      <Panel className="architecture-panel" icon={GitBranch} title="多智能体任务流" meta="4 个智能体 · KG 是共享状态底座">
-        <AgentArchitecture selectedAgent={selectedAgent} onSelectAgent={onSelectAgent} />
+      <Panel className="architecture-panel" icon={GitBranch} title="多智能体任务流" meta={`4 Agent + 2 确定性节点 · ${modeOptions.find((item) => item.id === operationMode)?.label}`}>
+        <AgentArchitecture selectedAgent={selectedAgent} onSelectAgent={onSelectAgent} operationMode={operationMode} />
       </Panel>
       <div className="overview-lower">
         <Panel className="overview-sim" icon={Bot} title="仿真 / 相机视图" meta="仿真接口待接入">
@@ -252,30 +268,30 @@ function OverviewWorkspace({
   );
 }
 
-function AgentArchitecture({ selectedAgent, onSelectAgent }: { selectedAgent: AgentTraceNode; onSelectAgent: (id: string) => void }) {
+function AgentArchitecture({ selectedAgent, onSelectAgent, operationMode }: { selectedAgent: AgentTraceNode; onSelectAgent: (id: string) => void; operationMode: OperationMode }) {
   const byId = (id: string) => agentTrace.find((agent) => agent.id === id)!;
   return (
     <div className="architecture-map">
       <button className={`supervisor-card agent-card ${selectedAgent.id === "supervisor" ? "selected" : ""}`} onClick={() => onSelectAgent("supervisor")} type="button">
-        <Bot size={17} /><span><strong>Supervisor Agent</strong><small>目标分解 · 流程调度 · 重规划触发</small></span><Badge tone="green">运行中</Badge>
+        <Bot size={17} /><span><strong>Supervisor Agent</strong><small>三模式条件路由 · 单步闭环</small></span><Badge tone="green">{modeOptions.find((item) => item.id === operationMode)?.label ?? "运行中"}</Badge>
       </button>
       <div className="dispatch-label">调度与状态回收</div>
       <div className="primary-flow">
         <FlowAgent agent={byId("perception")} selected={selectedAgent.id === "perception"} onSelect={onSelectAgent} index="01" />
         <FlowArrow label="观测事件" />
-        <button className="flow-card kg-component" onClick={() => onSelectAgent("kg_state")} type="button">
-          <Database size={17} /><span><strong>知识图谱状态</strong><small>长期知识 · 场景记忆 · 事件日志</small></span><em>规划评分不写入 KG</em>
+        <button className="flow-card kg-component" onClick={() => onSelectAgent("kg_writer")} type="button">
+          <Database size={17} /><span><strong>KG Writer</strong><small>Schema 校验 · 唯一写入口</small></span><em>确定性节点</em>
         </button>
-        <FlowArrow label="graph_state" />
+        <FlowArrow label="KG 引用" />
         <FlowAgent agent={byId("action_planner")} selected={selectedAgent.id === "action_planner"} onSelect={onSelectAgent} index="03" />
         <FlowArrow label="结构化计划" />
         <div className="execution-branch">
-          <span className="human-gate-label"><UserCheck size={13} /> 人工门控</span>
+          <button className="human-gate-label" onClick={() => onSelectAgent("human_interrupt")} type="button"><UserCheck size={13} /> Human Review Interrupt</button>
           <FlowAgent agent={byId("execution")} selected={selectedAgent.id === "execution"} onSelect={onSelectAgent} index="04" />
           <span className="ros2-label"><Send size={12} /> ROS2 Bridge</span>
         </div>
       </div>
-      <div className="feedback-line"><RotateCcw size={13} /> 执行结果与人工确认写入 EventLog，Supervisor 根据新状态继续或重规划</div>
+      <div className="feedback-line"><RotateCcw size={13} /> 每次物理动作后：KG Writer → 新 Scene → Perception → Supervisor → 单步重规划</div>
       <div className="agent-boundary"><strong>{selectedAgent.title}</strong><span>{selectedAgent.decision}</span></div>
     </div>
   );

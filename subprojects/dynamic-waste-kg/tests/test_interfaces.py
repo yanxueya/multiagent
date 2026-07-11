@@ -79,7 +79,7 @@ class InterfaceTests(unittest.TestCase):
         self.assertEqual(detection.review_status(), "human_review_required")
         self.assertEqual(detection.resolved_confidence(), 0.80)
 
-    def test_langgraph_state_contains_long_term_and_planning_context(self) -> None:
+    def test_langgraph_state_contains_control_fields_and_kg_reference_only(self) -> None:
         graph = KnowledgeGraph()
         seed_default_categories(graph)
         graph.apply_observation(
@@ -104,12 +104,14 @@ class InterfaceTests(unittest.TestCase):
             graph,
             PlannerRequest(task_id="task_001", objective="sort_glass", target_categories=["glass"]),
         )
-        self.assertIn("planning_context", state)
-        self.assertIn("long_term_knowledge", state)
-        self.assertIn("glass", state["long_term_knowledge"])
-        self.assertTrue(state["planning_context"]["candidates"])
+        self.assertEqual(state["operation_mode"], "human_collaboration")
+        self.assertEqual(state["current_scene_id"], "frame_002")
+        self.assertEqual(state["review_instance_ids"], ["glass_01"])
+        self.assertEqual(state["kg_summary_ref"], "kg://scene/frame_002")
+        self.assertNotIn("planning_context", state)
+        self.assertNotIn("long_term_knowledge", state)
 
-    def test_ros2_feedback_marks_instance_processed_or_blocked(self) -> None:
+    def test_ros2_feedback_only_records_a_started_physical_attempt(self) -> None:
         graph = KnowledgeGraph()
         seed_default_categories(graph)
         graph.apply_observation(
@@ -130,6 +132,21 @@ class InterfaceTests(unittest.TestCase):
             )
         )
 
+        planning_only_action = build_ros2_action_command("pick", "brick_01")
+        planning_only_result = apply_execution_feedback(
+            graph,
+            ExecutionFeedback(
+                action_id=planning_only_action.action_id,
+                target_instance_id="brick_01",
+                status="refused",
+                message="moveit_plan_failed",
+                physical_attempt_started=False,
+            ),
+        )
+        self.assertFalse(planning_only_result["event_recorded"])
+        self.assertEqual(graph.instances["brick_01"].task_status, "pending")
+        self.assertEqual(graph.instances["brick_01"].attempt_count, 0)
+
         action = build_ros2_action_command("pick", "brick_01", {"gripper": "close"}, requires_confirmation=False)
         result = apply_execution_feedback(
             graph,
@@ -138,25 +155,13 @@ class InterfaceTests(unittest.TestCase):
                 target_instance_id="brick_01",
                 status="success",
                 message="removed",
+                physical_attempt_started=True,
             ),
         )
         self.assertEqual(result["status"], "success")
+        self.assertTrue(result["event_recorded"])
         self.assertEqual(graph.instances["brick_01"].task_status, "completed")
         self.assertEqual(graph.instances["brick_01"].attempt_count, 1)
-
-        blocked_action = build_ros2_action_command("pick", "brick_01")
-        blocked_result = apply_execution_feedback(
-            graph,
-            ExecutionFeedback(
-                action_id=blocked_action.action_id,
-                target_instance_id="brick_01",
-                status="failed",
-                message="grasp_failed",
-            ),
-        )
-        self.assertEqual(blocked_result["status"], "failed")
-        self.assertEqual(graph.instances["brick_01"].task_status, "failed")
-        self.assertEqual(graph.instances["brick_01"].attempt_count, 2)
         self.assertEqual(graph.events[-1].event_type, "ExecutionEvent")
 
 

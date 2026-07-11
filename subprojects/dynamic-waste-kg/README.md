@@ -10,7 +10,7 @@
 
 YOLO 负责检测和实例分割明确类别；VLM/LLM 只做结构化视觉属性复核和一致性判断；知识图谱负责长期类别先验、短期实例状态、`unknown` 复核入口、事件日志和规划接口。
 
-知识图谱的规划接口输出 `graph_state`，包括 `recognition_status`、`current_handling_policy`、`task_status`、`attempt_count`、深度与遮挡状态、类别风险先验和派生可行性。知识图谱不保存优先级、评分或动作顺序；规划器必须先检查可行性和风险门控，再在规划期动态计算顺序。
+知识图谱的只读规划接口临时输出候选快照，包括 `recognition_status`、`current_handling_policy`、`task_status`、`attempt_count`、深度、遮挡、NEAR 数量和类别先验。完整候选不复制进 LangGraph State；State 只保存 Scene、待复核/可执行 ID 和 KG 引用。第一阶段规划器只做硬过滤与无权重字典序。
 
 ## 快速入口
 

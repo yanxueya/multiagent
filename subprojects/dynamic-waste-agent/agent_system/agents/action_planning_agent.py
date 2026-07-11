@@ -4,8 +4,8 @@
 def describe_action_planning_agent() -> dict[str, object]:
     return {
         "name": "action_planning_agent",
-        "role": "filter by graph feasibility and risk gates, then compute dynamic priority and recoverable action order",
-        "inputs": ["objective", "graph_state", "risk_assessments", "robot_capabilities"],
-        "outputs": ["ordered_plan", "deferred_targets", "failure_policy"],
-        "status": "placeholder_with_decision_contract",
+        "role": "apply hard eligibility constraints and lexicographically select exactly one next action",
+        "inputs": ["user_goal", "current_scene_id", "eligible_instance_ids", "kg_candidate_loader"],
+        "outputs": ["single_action_plan"],
+        "status": "implemented_phase_one_lexicographic_ranking",
     }

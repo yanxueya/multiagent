@@ -158,8 +158,8 @@ class_name, confidence, bbox, mask, image_id, timestamp
 随后知识图谱再结合长期知识和短期状态生成：
 
 ```text
-visible, reachable, graspable, risk_level,
-requires_review, blocked_by, can_attempt_now
+recognition_status, current_handling_policy, task_status,
+depth_valid_ratio, occlusion_state, NEAR邻居数量, can_attempt_now
 ```
 
 因此，不能把 `mAP 高` 写成 `机器人可以自动完成分拣`。更准确的表述是：当前 YOLO 模型可以为动态知识图谱提供对象级二维视觉输入，后续是否执行要由图谱状态约束和规划器共同决定。

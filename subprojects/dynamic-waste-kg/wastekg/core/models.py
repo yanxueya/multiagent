@@ -240,7 +240,8 @@ EVENT_ATTRIBUTE_FIELDS = {
     "DepthUpdateEvent": {"center_xyz_camera", "depth_valid_ratio", "observed_extent_3d", "occlusion_state"},
     "HumanReviewEvent": {"review_action", "reason"},
     "PlanningEvent": {"planned_action", "reason"},
-    "ExecutionEvent": {"execution_result", "failure_reason"},
+    # action_id 用于 LangGraph 恢复时的物理动作幂等保护；只有真实动作开始后才允许写入该事件。
+    "ExecutionEvent": {"action_id", "physical_attempt_started", "execution_result", "failure_reason"},
     "KnowledgeEvolutionEvent": {"evolution_action", "reason"},
 }
 

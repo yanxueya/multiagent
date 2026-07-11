@@ -6,9 +6,10 @@
 
 ## 已实现原型
 
-- LangGraph Trace：以接近 LangSmith 的 run tree / nested span / timeline 形式展示 `4 个真正 agent + 非 agent 组件`。
+- LangGraph Trace：以接近 LangSmith 的 run tree / nested span / timeline 形式展示 `4 个 Agent + 2 个确定性节点 + 外部工具`。
 - 4 个真正 agent：`supervisor_agent`、`perception_agent`、`action_planning_agent`、`execution_agent`。
-- 非 agent 组件：`kg_state_projection`、`risk_gate`、`human_control_gate`、`ros2_bridge`、`feedback_update`。
+- 两个确定性图节点：`kg_writer`、`human_review_interrupt`。
+- 三种模式：`exploration`、`supervised_execution`、`human_collaboration`，可在顶部切换展示。
 - Knowledge Graph State：从 `/data/kg-snapshot.json` 读取 KG 快照，展示长期知识层、短期实例层、事件日志层和 graph_state 谓词。
 - Human Review Queue：根据 KG 实例状态派生高风险、unknown、VLM 冲突和需要人工复核的对象。
 - Simulation / Digital Twin：预留 D435i、PiPER/机械臂、mask、bbox 和回放时间轴位置。
@@ -60,7 +61,7 @@ npm.cmd run build
 
 ```text
 KG：已接入 JSON snapshot 文件；尚未接 live API。
-LangGraph：UI trace 已按 4-agent + components 的新架构展示，但仍是前端预览数据。
+LangGraph：UI trace 已按三模式、4 Agent、KG Writer、interrupt 和单步重规划展示，但仍是前端预览数据。
 ROS2：UI 只做结构化命令预览；dynamic-waste-ros2 bridge 尚未接入真实执行。
 Simulation：当前是占位/回放界面，等待后续接仿真环境。
 ```
@@ -70,6 +71,6 @@ Simulation：当前是占位/回放界面，等待后续接仿真环境。
 - 前端不实现核心知识图谱推理，只展示 KG 或 agent bridge 输出的结构化状态。
 - 前端不直接控制 ROS2 硬件节点，只提交经过门控确认的结构化命令请求。
 - 高风险类别、低置信度候选、unknown 状态和 VLM 冲突对象必须进入人工复核。
-- `KG state`、`risk_gate`、`human_control_gate` 在 UI 中显示为组件或门控，不显示为 agent。
+- `kg_writer` 和 `human_review_interrupt` 显示为确定性节点，不显示为 Agent；资格校验和 ROS2 bridge 显示为工具或服务。
 - UI 不展示 `task_value` 或独立价值函数节点；规划优先级只显示为 `action_planning_agent` 的动态计算结果。
 - 涉及模型训练时，界面可以展示操作指令和显存检查提示，但不在沙盒中启动训练。

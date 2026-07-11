@@ -6,6 +6,7 @@ from collections import defaultdict
 from dataclasses import replace
 from math import sqrt
 from typing import Any, Dict, Iterable, List, Optional, Tuple
+from uuid import uuid4
 
 from wastekg.core.models import (
     CategorySpec,
@@ -58,6 +59,7 @@ class KnowledgeGraph:
         self._track_map: Dict[str, str] = {}
         self._class_counters: Dict[str, int] = defaultdict(int)
         self._unknown_counter = 0
+        self._executed_action_ids: set[str] = set()
 
     def register_category(self, category: CategorySpec) -> None:
         """注册长期 WasteCategory；初始种子不产生事件。"""
@@ -251,11 +253,20 @@ class KnowledgeGraph:
         self._append_event(event, relations)
         return {"event_id": event.event_id, "target_id": target_id, "review_action": review_action}
 
-    def record_planning_event(self, scene_id: str, instance_id: str, *, planned_action: str, reason: str = "") -> GraphEvent:
-        allowed = {"robot_grasp", "request_human_review", "rescan", "no_action"}
+    def record_planning_event(
+        self,
+        scene_id: str,
+        instance_id: str,
+        *,
+        planned_action: str,
+        reason: str = "",
+        action_id: str = "",
+    ) -> GraphEvent:
+        allowed = {"robot_grasp", "request_human_review", "rescan", "complete", "no_action"}
         if planned_action not in allowed:
             raise ValueError(f"Unsupported planned_action: {planned_action}")
-        event = GraphEvent("PlanningEvent", attributes={"planned_action": planned_action, "reason": reason})
+        event_kwargs = {"event_id": action_id} if action_id else {}
+        event = GraphEvent("PlanningEvent", attributes={"planned_action": planned_action, "reason": reason}, **event_kwargs)
         relations = [("IN_SCENE", scene_id)]
         if instance_id:
             relations.append(("SELECTS", instance_id))
@@ -269,9 +280,17 @@ class KnowledgeGraph:
         scene_id: str,
         instance_id: str,
         *,
+        action_id: str,
+        physical_attempt_started: bool,
         execution_result: str,
         failure_reason: str = "",
     ) -> GraphEvent:
+        if not action_id:
+            raise ValueError("ExecutionEvent requires action_id")
+        if action_id in self._executed_action_ids:
+            raise ValueError(f"Duplicate physical action_id: {action_id}")
+        if not physical_attempt_started:
+            raise ValueError("ExecutionEvent is only valid after a physical attempt starts")
         if execution_result not in {"success", "failure"}:
             raise ValueError("execution_result must be success or failure")
         instance = self.instances[instance_id]
@@ -279,9 +298,15 @@ class KnowledgeGraph:
         instance.task_status = "completed" if execution_result == "success" else "failed"
         event = GraphEvent(
             "ExecutionEvent",
-            attributes={"execution_result": execution_result, "failure_reason": failure_reason if execution_result == "failure" else ""},
+            attributes={
+                "action_id": action_id,
+                "physical_attempt_started": True,
+                "execution_result": execution_result,
+                "failure_reason": failure_reason if execution_result == "failure" else "",
+            },
         )
         self._append_event(event, [("EXECUTES_ON", instance_id), ("IN_SCENE", scene_id)])
+        self._executed_action_ids.add(action_id)
         return event
 
     def record_knowledge_evolution(
@@ -323,7 +348,13 @@ class KnowledgeGraph:
 
         instance = self.instances[instance_id]
         scene_id = instance.last_seen_scene or next(reversed(self.scenes), "scene_unknown")
-        self.record_execution_event(scene_id, instance_id, execution_result="success")
+        self.record_execution_event(
+            scene_id,
+            instance_id,
+            action_id=f"legacy_action_{uuid4().hex[:10]}",
+            physical_attempt_started=True,
+            execution_result="success",
+        )
 
     def list_active_instances(self) -> List[ObjectInstance]:
         return [instance for instance in self.instances.values() if instance.task_status != "completed"]
