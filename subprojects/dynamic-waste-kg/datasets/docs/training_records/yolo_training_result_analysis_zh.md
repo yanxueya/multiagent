@@ -24,13 +24,13 @@
 权重文件：
 
 ```text
-C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_baseline\weights\best.pt
+C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\outputs\yolo_runs\segment\runs\waste12_seg\yolo11n_seg_baseline\weights\best.pt
 ```
 
 训练结果图：
 
 ```text
-C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_baseline\results.png
+C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\outputs\yolo_runs\segment\runs\waste12_seg\yolo11n_seg_baseline\results.png
 ```
 
 ---
@@ -187,7 +187,7 @@ C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\outputs\yolo_ru
 先跑 10 个 epoch，确认训练稳定：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\train_yolo_seg.py `
+.\.venv\Scripts\python.exe scripts\yolo\train_yolo_seg.py `
   --data datasets\waste12_yolo\data.yaml `
   --model yolo11n-seg.pt `
   --epochs 10 `
@@ -208,7 +208,7 @@ C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\outputs\yolo_ru
 如果 10 个 epoch 稳定，再跑 50 个 epoch：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\train_yolo_seg.py `
+.\.venv\Scripts\python.exe scripts\yolo\train_yolo_seg.py `
   --data datasets\waste12_yolo\data.yaml `
   --model yolo11n-seg.pt `
   --epochs 50 `
@@ -223,7 +223,7 @@ C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\outputs\yolo_ru
 如果 `yolo11n-seg.pt` 收敛后仍然不够，再尝试 `yolo11s-seg.pt`：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\train_yolo_seg.py `
+.\.venv\Scripts\python.exe scripts\yolo\train_yolo_seg.py `
   --data datasets\waste12_yolo\data.yaml `
   --model yolo11s-seg.pt `
   --epochs 50 `

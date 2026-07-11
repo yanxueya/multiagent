@@ -1,4 +1,4 @@
-﻿# multiagent 工作区
+# multiagent 工作区
 
 这是一个多智能体与动态建筑废弃物知识图谱研究工作区。当前已实现知识图谱核心、LangGraph 4-agent 编排和前端工作台原型；ROS2 真实桥接、机械臂闭环和仿真仍待接入。
 
@@ -93,7 +93,7 @@ git status --short --branch
 ```powershell
 .\.venv\Scripts\python.exe scripts\yolo\train_yolo_seg.py `
   --data datasets\waste12_yolo\data.yaml `
-  --model outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_e50\weights\best.pt `
+  --model outputs\yolo_runs\segment\runs\waste12_seg\yolo11n_seg_e50\weights\best.pt `
   --epochs 50 `
   --imgsz 640 `
   --batch 4 `

@@ -61,7 +61,7 @@ dynamic-waste-kg/
 - 事件日志。
 - YOLO/RealSense/VLM 到图谱的输入适配。
 - Neo4j 导出和可视化。
-- 给 LangGraph 输出 `graph_state`，供风险门控、操作序列规划器和 ROS2 桥接层使用。
+- 给 LangGraph 输出只读候选快照和 `graph_state`，供确定性资格校验与单步行动规划使用。
 
 `dynamic-waste-kg` 不负责：
 
@@ -70,6 +70,8 @@ dynamic-waste-kg/
 - MoveIt 运动规划实现。
 - 最终 UI。
 - 完整机器人安全系统。
+
+当前 `dynamic-waste-agent` 已提供 `WasteKgRuntimeAdapter`，可将 Agent 的只读候选查询和四类受控写入接到本子项目的内存 `KnowledgeGraph`。Neo4j 在线事务适配器仍未实现；现有 Neo4j 能力是导出/导入与可视化边界。
 
 
 ## 导出到 UI

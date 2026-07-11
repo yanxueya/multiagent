@@ -193,6 +193,7 @@ def vision_packet_to_observation(packet: VisionPacket) -> Observation:
 # 为 LangGraph 多智能体层组装线程级控制状态，不复制完整 KG。
 def build_langgraph_state(graph: KnowledgeGraph, request: Optional[PlannerRequest] = None) -> Dict[str, Any]:
     request = request or PlannerRequest(task_id=f"task_{uuid4().hex[:8]}", objective="unassigned")
+    current_scene_id = next(reversed(graph.scenes), "")
     planning_context = build_planning_context(
         graph,
         task={
@@ -201,11 +202,11 @@ def build_langgraph_state(graph: KnowledgeGraph, request: Optional[PlannerReques
             "target_categories": list(request.target_categories),
             "max_candidates": request.max_candidates,
             "human_confirmation_required": request.human_confirmation_required,
+            "scene_id": current_scene_id,
         },
     )
     if request.operation_mode not in {"exploration", "supervised_execution", "human_collaboration"}:
         raise ValueError(f"Unsupported operation_mode: {request.operation_mode}")
-    current_scene_id = next(reversed(graph.scenes), "")
     review_ids = [str(item["instance_id"]) for item in planning_context["review_required"]]
     return {
         "task_id": request.task_id,

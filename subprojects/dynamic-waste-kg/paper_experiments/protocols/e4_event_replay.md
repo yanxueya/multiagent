@@ -99,7 +99,7 @@ paper_experiments/e4_image_sequences/seq001/
 .\.venv\Scripts\python.exe paper_experiments\scripts\run_e4_image_sequence.py `
   --before paper_experiments\e4_image_sequences\seq001\before.jpg `
   --after paper_experiments\e4_image_sequences\seq001\after.jpg `
-  --weights outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt `
+  --weights outputs\yolo_runs\segment\runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt `
   --out artifacts\paper\e4_image_sequence_seq001 `
   --conf 0.25 `
   --device 0 `

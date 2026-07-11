@@ -15,7 +15,7 @@ from wastekg.yolo.ultralytics_runtime import prepare_ultralytics_runtime
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Train a YOLO segmentation model for the waste12 dataset.")
+    parser = argparse.ArgumentParser(description="Train a YOLO segmentation model for the 11-class waste dataset (historical directory: waste12_yolo).")
     parser.add_argument("--data", type=Path, default=Path("datasets/waste12_yolo/data.yaml"))
     parser.add_argument("--model", default="yolo11n-seg.pt")
     parser.add_argument("--epochs", type=int, default=80)

@@ -9,6 +9,20 @@ from wastekg.graph.store import KnowledgeGraph
 
 
 class QueryTests(unittest.TestCase):
+    def test_scene_filter_excludes_stale_instances_from_current_candidates(self) -> None:
+        graph = KnowledgeGraph()
+        seed_default_categories(graph)
+        graph.apply_observation(
+            Observation(frame_id="scene_001", source="realsense", objects=[DetectedObject("a", "brick", 0.95, depth_valid_ratio=0.8, occlusion_state="none")])
+        )
+        graph.apply_observation(
+            Observation(frame_id="scene_002", source="realsense", objects=[DetectedObject("b", "wood", 0.95, depth_valid_ratio=0.8, occlusion_state="none")])
+        )
+
+        context = build_planning_context(graph, task={"scene_id": "scene_002"})
+
+        self.assertEqual([item["instance_id"] for item in context["candidates"]], ["wood_01"])
+
     def test_build_planning_context_uses_category_relations(self) -> None:
         graph = KnowledgeGraph()
         seed_default_categories(graph)
@@ -37,6 +51,7 @@ class QueryTests(unittest.TestCase):
                 objects=[
                     DetectedObject("a", "brick", 0.95, depth_valid_ratio=0.8, occlusion_state="none"),
                     DetectedObject("b", "glass", 0.92, depth_valid_ratio=0.8, occlusion_state="none"),
+                    DetectedObject("c", "wood", 0.93, depth_valid_ratio=0.1, occlusion_state="none"),
                 ],
             )
         )
@@ -46,6 +61,9 @@ class QueryTests(unittest.TestCase):
         self.assertFalse(state["glass_01"]["can_attempt_now"])
         self.assertTrue(state["glass_01"]["requires_review"])
         self.assertIn("current_handling_policy=human_confirmation_required", state["glass_01"]["feasibility_reasons"])
+        self.assertFalse(state["wood_01"]["can_attempt_now"])
+        self.assertTrue(state["wood_01"]["requires_review"])
+        self.assertIn("wood_01", [item["instance_id"] for item in build_planning_context(graph)["review_required"]])
 
 
 if __name__ == "__main__":

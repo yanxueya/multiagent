@@ -25,7 +25,7 @@ DEFAULT_CLASS_NAMES = [
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Merge an external Roboflow YOLO segmentation glass dataset into waste12_yolo."
+        description="Merge an external Roboflow YOLO segmentation glass dataset into the 11-class dataset stored in historical directory waste12_yolo."
     )
     parser.add_argument("--source-root", type=Path, required=True)
     parser.add_argument("--target-root", type=Path, default=Path("datasets/waste12_yolo"))

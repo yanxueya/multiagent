@@ -33,7 +33,7 @@ concrete, brick, tile, wood, gypsum_board, foam,
 metal, soft_plastic, hard_plastic, paperboard, glass
 ```
 
-`unknown` 不是 YOLO 训练类别。它是系统在低置信度、证据冲突、风险不明或需要人工复核时生成的图谱/任务状态。
+`unknown` 不是 YOLO 训练类别。低置信度候选先进入 `review_required`；只有 VLM 冲突、人工标记未知或复核后仍无法归入 11 类时才进入 `unknown`。
 
 ## 3. 训练曲线怎么看
 

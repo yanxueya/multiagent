@@ -249,7 +249,9 @@ class KnowledgeGraph:
             elif review_action == "forbid_robot":
                 instance.current_handling_policy = "robot_forbidden"
             elif review_action == "discard_detection":
-                del self.instances[target_id]
+                instance.current_handling_policy = "robot_forbidden"
+                instance.task_status = "completed"
+                self._track_map = {key: value for key, value in self._track_map.items() if value != target_id}
         self._append_event(event, relations)
         return {"event_id": event.event_id, "target_id": target_id, "review_action": review_action}
 
@@ -270,8 +272,6 @@ class KnowledgeGraph:
         relations = [("IN_SCENE", scene_id)]
         if instance_id:
             relations.append(("SELECTS", instance_id))
-            if instance_id in self.instances:
-                self.instances[instance_id].task_status = "processing"
         self._append_event(event, relations)
         return event
 
@@ -358,6 +358,14 @@ class KnowledgeGraph:
 
     def list_active_instances(self) -> List[ObjectInstance]:
         return [instance for instance in self.instances.values() if instance.task_status != "completed"]
+
+    def has_execution_action(self, action_id: str) -> bool:
+        """查询动作是否已有真实 ExecutionEvent，用于执行前幂等门控。"""
+
+        return action_id in self._executed_action_ids or any(
+            event.event_type == "ExecutionEvent" and event.attributes.get("action_id") == action_id
+            for event in self.events
+        )
 
     def resolve_instance_category(self, instance_id: str) -> str:
         """优先读取 CONFIRMED_AS，其次读取 CANDIDATE_OF。"""

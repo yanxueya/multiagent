@@ -84,13 +84,13 @@ glass
 脚本位置：
 
 ```text
-C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\scripts\merge_cdw_coco_seg.py
+C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\scripts\data\merge_cdw_coco_seg.py
 ```
 
 执行命令：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\merge_cdw_coco_seg.py `
+.\.venv\Scripts\python.exe scripts\data\merge_cdw_coco_seg.py `
   --coco-zip "D:\可能有用的data\2026.6.15\Ground_Truths_COCO_Format" `
   --target-root datasets\waste12_yolo
 ```
@@ -244,9 +244,9 @@ ReviewResult(
 合并完成后，如果用户确认要继续训练，可以从当前较好的权重继续训练，而不是从头训练。参考命令：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\train_yolo_seg.py `
+.\.venv\Scripts\python.exe scripts\yolo\train_yolo_seg.py `
   --data datasets\waste12_yolo\data.yaml `
-  --model outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_e50\weights\best.pt `
+  --model outputs\yolo_runs\segment\runs\waste12_seg\yolo11n_seg_e50\weights\best.pt `
   --epochs 50 `
   --imgsz 640 `
   --batch 4 `
@@ -269,4 +269,3 @@ ReviewResult(
 - `metal`、`soft_plastic`、`paperboard` 是否改善；
 - 原本强类如 `concrete/brick/tile` 是否下降；
 - 是否出现 `gypsum_board` 与 `unknown`/人工复核策略混乱。
-

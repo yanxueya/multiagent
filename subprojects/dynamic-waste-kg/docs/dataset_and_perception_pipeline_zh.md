@@ -46,7 +46,7 @@ paperboard
 glass
 ```
 
-`unknown` 不是训练类别，而是系统在低置信度、证据冲突或无法可靠归类时生成的人工复核状态。
+`unknown` 不是训练类别。低置信度候选先进入 `review_required`；VLM 冲突、人工标记未知或复核后仍无法可靠归类时才进入 `unknown`。
 
 `asbestos` / `asbestos_suspect` 不进入当前 YOLO 训练类别；如外部数据或人工记录中出现相关标记，应映射为 `unknown` 或人工复核事件。
 

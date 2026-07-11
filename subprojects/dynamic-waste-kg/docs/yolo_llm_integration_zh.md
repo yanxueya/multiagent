@@ -287,7 +287,7 @@ graph.apply_observation(observation)
 - `glass`、`gypsum_board` 这类易碎或易混淆对象优先触发 VLM 属性校验
 - `brick`、`concrete` 这类大类可以更依赖 YOLO
 - `paperboard`、`soft_plastic` 这类形态变化大的类，可以多走 VLM 校验
-- 极低置信度目标直接进入 `unknown`
+- `0.05 <= conf < 0.30` 的低置信度候选进入 `review_required`，不直接变成 `unknown`
 
 ### 第四步：把结果写回图谱
 

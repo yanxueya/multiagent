@@ -7,9 +7,9 @@ from typing import Any, Callable
 KGWriterBackend = Callable[[dict[str, Any]], dict[str, Any]]
 
 _ALLOWED_PAYLOAD_FIELDS = {
-    "perception": {"scene_id", "updated_instance_ids", "accepted_instance_ids", "review_instance_ids", "unknown_instance_ids", "eligible_instance_ids", "events", "perception_completed"},
+    "perception": {"scene_id", "observation_ref", "updated_instance_ids", "accepted_instance_ids", "review_instance_ids", "unknown_instance_ids", "events", "perception_completed"},
     "planning": {"action_plan", "planned_action", "reason"},
-    "human_review": {"review_results", "events"},
+    "human_review": {"scene_id", "review_results", "events"},
     "execution": {"execution_result"},
 }
 

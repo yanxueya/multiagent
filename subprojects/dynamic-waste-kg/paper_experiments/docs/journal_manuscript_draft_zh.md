@@ -1,4 +1,4 @@
-﻿# 面向复杂动态建筑废弃物环境的人机协同自治决策：融合实例分割、大模型复核与动态知识图谱的多智能体框架
+# 面向复杂动态建筑废弃物环境的人机协同自治决策：融合实例分割、大模型复核与动态知识图谱的多智能体框架
 
 > 期刊论文草稿版本。本文参考了“LLM-informed multi-agent AI system for drone-based visual inspection for infrastructure”的论文组织方式，但研究对象、系统任务、数据结构和实验内容均围绕本项目重新组织。  
 > 目标期刊方向可考虑：Automation in Construction、Advanced Engineering Informatics、Journal of Building Engineering、Engineering, Construction and Architectural Management 等。
@@ -430,7 +430,7 @@ datasets/waste12_yolo/images/val/instseg_mix07_rgb_0038_png_jpg.rf.f85422203eb2c
 ```powershell
 .\.venv\Scripts\python.exe scripts\graph\predict_image_to_graph.py `
   --image datasets\waste12_yolo\images\val\instseg_mix07_rgb_0038_png_jpg.rf.f85422203eb2cdf1f58a20d17d16fc25.jpg `
-  --weights outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt `
+  --weights outputs\yolo_runs\segment\runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt `
   --out artifacts\single_image_llm_demo `
   --conf 0.5 `
   --device 0 `
@@ -457,15 +457,15 @@ datasets/waste12_yolo/images/val/instseg_mix07_rgb_0038_png_jpg.rf.f85422203eb2c
 
 训练曲线见图 1。
 
-![图 1 YOLO11n-seg 训练曲线](../../outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/results.png)
+![图 1 YOLO11n-seg 训练曲线](../../outputs/yolo_runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/results.png)
 
 混淆矩阵见图 2。
 
-![图 2 混淆矩阵](../../outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/confusion_matrix.png)
+![图 2 混淆矩阵](../../outputs/yolo_runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/confusion_matrix.png)
 
 Mask PR 曲线见图 3。
 
-![图 3 Mask PR 曲线](../../outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/MaskPR_curve.png)
+![图 3 Mask PR 曲线](../../outputs/yolo_runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/MaskPR_curve.png)
 
 ### 5.2 单图识别与图谱构建结果
 
@@ -585,7 +585,7 @@ artifacts/single_image_llm_demo
 
 ```text
 datasets/waste12_yolo/data.yaml
-outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/weights/best.pt
+outputs/yolo_runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/weights/best.pt
 ```
 
 ### 单图实验输出

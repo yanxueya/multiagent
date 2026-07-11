@@ -72,11 +72,11 @@ shape_form
 ```json
 {
   "scene_id": "scene_001",
+  "observation_ref": "memory://observation/scene_001",
   "updated_instance_ids": [],
   "accepted_instance_ids": [],
   "review_instance_ids": [],
   "unknown_instance_ids": [],
-  "eligible_instance_ids": [],
   "events": {
     "detection_events": [],
     "vlm_review_events": [],
@@ -85,5 +85,7 @@ shape_form
   "perception_completed": true
 }
 ```
+
+`observation_ref` 是进程内 Observation 的临时传输引用，KG Writer 提交后立即释放；它不是 KG 节点属性。感知 Agent 不得输出 `eligible_instance_ids`，该列表只能由 KG 写入后的确定性状态投影返回。
 
 只输出 JSON。若确定性工具失败，`perception_completed=false`，并在工具错误通道返回原因；不得伪造缺失结果。

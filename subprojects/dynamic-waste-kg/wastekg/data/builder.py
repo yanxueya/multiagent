@@ -10,7 +10,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
-from wastekg.core.taxonomy import CLASS_TO_ID, WASTE12_CLASSES, canonicalize_category_name
+from wastekg.core.taxonomy import CLASS_TO_ID, KNOWN_VISUAL_CLASSES, canonicalize_category_name
 
 
 def build_dataset(
@@ -22,7 +22,7 @@ def build_dataset(
 ) -> Dict[str, Any]:
     output_root.mkdir(parents=True, exist_ok=True)
     summary: Dict[str, Any] = {
-        "classes": WASTE12_CLASSES,
+        "classes": KNOWN_VISUAL_CLASSES,
         "splits": defaultdict(lambda: {"images": 0, "objects": 0, "by_class": Counter(), "skipped_objects": Counter()}),
         "sources": {"codd": str(codd_root), "instance_segmentation": str(instance_seg_root)},
     }
@@ -211,12 +211,12 @@ def _update_summary(summary: Dict[str, Any], split: str, labels: List[List[float
     split_summary["images"] += 1
     split_summary["objects"] += len(labels)
     for label in labels:
-        split_summary["by_class"][WASTE12_CLASSES[int(label[0])]] += 1
+        split_summary["by_class"][KNOWN_VISUAL_CLASSES[int(label[0])]] += 1
     split_summary["skipped_objects"].update(skipped)
 
 
 def _write_data_yaml(output_root: Path) -> None:
-    names = "\n".join(f"  {index}: {name}" for index, name in enumerate(WASTE12_CLASSES))
+    names = "\n".join(f"  {index}: {name}" for index, name in enumerate(KNOWN_VISUAL_CLASSES))
     text = f"""path: {output_root.resolve().as_posix()}
 train: images/train
 val: images/val
@@ -244,7 +244,7 @@ def _summary_to_plain_dict(summary: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Build the research YOLO segmentation dataset for waste12 classes.")
+    parser = argparse.ArgumentParser(description="Build the research YOLO segmentation dataset for 11 known visual classes.")
     parser.add_argument("--codd-root", type=Path, required=True)
     parser.add_argument("--instance-seg-root", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)

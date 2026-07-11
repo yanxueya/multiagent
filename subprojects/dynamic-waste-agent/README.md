@@ -47,6 +47,8 @@ LangGraph State 只保存 `operation_mode`、`user_goal`、`current_scene_id`、
 
 一个完整任务使用一个稳定 `thread_id`。当前默认使用 `InMemorySaver` 便于原型测试；接真实 UI/ROS2 前应换成持久化 checkpointer。
 
+`agent_system.integrations.WasteKgRuntimeAdapter` 已把候选读取、历史查询、人工复核以及 perception/planning/human_review/execution 四类写入映射到真实内存 `KnowledgeGraph`。感知通过一次性 `observation_ref` 传递 Observation，写入后立即释放，不把完整 KG 或 Observation 放入 checkpoint。
+
 ## 规划规则
 
 - 先做识别、处理权限、任务状态、尝试次数、深度和遮挡硬过滤。
@@ -63,8 +65,9 @@ LangGraph State 只保存 `operation_mode`、`user_goal`、`current_scene_id`、
 
 ```powershell
 cd C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-agent
+.\.venv\Scripts\python.exe -m pip install -e ..\dynamic-waste-kg
 .\.venv\Scripts\python.exe -m agent_system.graph
 .\.venv\Scripts\python.exe -m unittest discover -s tests
 ```
 
-当前已实现编排、checkpointer、interrupt、schema 和外部工具契约；真实相机、Neo4j backend、ROS2/MoveIt 和机械臂闭环仍待接入。
+当前已实现编排、checkpointer、interrupt、schema、内存 KG 适配器和跨子项目闭环测试；真实相机、Neo4j 在线事务 backend、ROS2/MoveIt 和机械臂闭环仍待接入。

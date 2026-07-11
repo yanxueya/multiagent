@@ -13,8 +13,11 @@ def build_planning_context(graph: KnowledgeGraph, task: Optional[Dict[str, Any]]
 
     task = task or {}
     target_categories = {str(item) for item in task.get("target_categories", [])}
+    scene_id = str(task.get("scene_id") or task.get("current_scene_id") or "")
     max_candidates = int(task.get("max_candidates", 10))
     active = [instance for instance in graph.instances.values() if instance.task_status != "completed"]
+    if scene_id:
+        active = [instance for instance in active if instance.last_seen_scene == scene_id]
     if target_categories:
         active = [instance for instance in active if graph.resolve_instance_category(instance.instance_id) in target_categories]
 
@@ -56,14 +59,18 @@ def _instance_state(graph: KnowledgeGraph, instance: ObjectInstance) -> Dict[str
     category = graph.categories.get(category_name)
     risk_level = category.risk_level if category is not None else "high"
     graspability_prior = category.graspability_prior if category is not None else "low"
+    depth_ready = instance.depth_valid_ratio >= 0.30
+    reachable = instance.occlusion_state == "none"
+    grasp_feasible = depth_ready and reachable and graspability_prior in {"medium", "high"}
     requires_review = (
         instance.recognition_status != "accepted"
         or instance.current_handling_policy != "auto_allowed"
         or category_name == "unknown"
+        or not depth_ready
+        or not reachable
+        or graspability_prior == "low"
+        or instance.attempt_count >= 2
     )
-    depth_ready = instance.depth_valid_ratio >= 0.30
-    reachable = instance.occlusion_state == "none"
-    grasp_feasible = depth_ready and reachable and graspability_prior in {"medium", "high"}
     blocked = instance.task_status != "pending" or instance.current_handling_policy == "robot_forbidden"
     can_attempt_now = not requires_review and not blocked and grasp_feasible and instance.attempt_count < 2
     reasons: list[str] = []

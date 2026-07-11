@@ -12,7 +12,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from wastekg.data.freeze import freeze_visual_dataset
-from wastekg.core.taxonomy import WASTE12_CLASSES
+from wastekg.core.taxonomy import KNOWN_VISUAL_CLASSES
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -25,7 +25,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
-    class_names = args.class_name or WASTE12_CLASSES[:-1]
+    class_names = args.class_name or KNOWN_VISUAL_CLASSES
     result = freeze_visual_dataset(args.source, args.out, class_names=class_names)
     print("Visual dataset frozen")
     print(f"Output: {Path(result['output_root'])}")

@@ -2,7 +2,7 @@
 
 记录日期：2026-06-15
 
-本文件记录外部玻璃碎片数据集如何合并到当前 `waste12_yolo` 训练集。
+本文件记录外部玻璃碎片数据集如何合并到历史目录名为 `waste12_yolo` 的训练集。该目录当前实际只保留 11 个明确视觉类别。
 
 ---
 
@@ -70,7 +70,7 @@ Roboflow 元数据：
 
 这样做的原因：
 
-- 当前知识图谱和 YOLO 数据集只有 12 个研究类别；
+- 当前知识图谱和 YOLO 数据集只允许 11 个明确视觉类别；
 - `Not Glass` 不是研究实体；
 - 如果把 `Not Glass` 当成新类，会破坏当前类别体系；
 - 如果保留为其他类别，会引入错误监督。
@@ -82,13 +82,13 @@ Roboflow 元数据：
 合并脚本：
 
 ```text
-C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\scripts\merge_external_glass_seg.py
+C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\scripts\data\merge_external_glass_seg.py
 ```
 
 执行命令：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\merge_external_glass_seg.py `
+.\.venv\Scripts\python.exe scripts\data\merge_external_glass_seg.py `
   --source-root "D:\可能有用的data\有用_Glass Debris Detection.v5-not_glass-dataset.yolov11" `
   --target-root datasets\waste12_yolo `
   --source-glass-class 0 `
@@ -155,9 +155,9 @@ datasets\waste12_yolo\labels\train\glassdebris_v5_train_extra_image_11_jpeg...
 建议优先从当前已有的较好权重继续微调：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\train_yolo_seg.py `
+.\.venv\Scripts\python.exe scripts\yolo\train_yolo_seg.py `
   --data datasets\waste12_yolo\data.yaml `
-  --model outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_e50\weights\best.pt `
+  --model outputs\yolo_runs\segment\runs\waste12_seg\yolo11n_seg_e50\weights\best.pt `
   --epochs 50 `
   --imgsz 640 `
   --batch 4 `

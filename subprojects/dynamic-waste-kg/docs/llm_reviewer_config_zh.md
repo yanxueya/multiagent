@@ -1,4 +1,4 @@
-﻿# 大模型复核器配置说明
+# 大模型复核器配置说明
 
 本项目的大模型复核器使用 OpenAI-compatible Chat Completions 接口。你现在使用的是硅基流动，因此推荐按硅基流动配置 `.env`。
 
@@ -113,7 +113,7 @@ api_key: sk-...xxxx
 ```powershell
 .\.venv\Scripts\python.exe scripts\graph\predict_image_to_graph.py `
   --image datasets\waste12_yolo\images\val\instseg_mix07_rgb_0038_png_jpg.rf.f85422203eb2cdf1f58a20d17d16fc25.jpg `
-  --weights outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt `
+  --weights outputs\yolo_runs\segment\runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt `
   --out artifacts\single_image_llm_demo `
   --conf 0.5 `
   --device 0 `

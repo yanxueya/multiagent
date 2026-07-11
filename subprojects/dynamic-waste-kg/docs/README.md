@@ -1,6 +1,6 @@
 # 文档导航
 
-本文档用于解决 `docs/` 目录文件较多、不易定位的问题。当前不大规模移动旧文件，避免破坏已有链接；先用导航方式建立清晰入口。
+本文档是当前主线文档入口。`docs/` 只保留运行系统所需的关键说明；论文写作材料、实验记录和数据处理记录分别归入相邻子目录。
 
 后续整理原则：主 `docs/` 只保留当前主线和最关键内容。小论文补充实验文档应迁移到 `paper_experiments/docs/`；数据来源、数据合并、数据清洗和中间数据处理说明应迁移到 `datasets/docs/`。不要把中间测试记录继续堆在主 `docs/`。
 
@@ -58,7 +58,7 @@
 
 ## 4. 小论文实验与结果
 
-用于论文实验组织和结果沉淀。后续应整体迁移到 `paper_experiments/docs/`：
+用于论文实验组织和结果沉淀，统一位于 `paper_experiments/docs/`：
 
 - [小论文实验执行指令](../paper_experiments/docs/小论文实验执行指令.md)
 - [小论文实验完善指令完整修订版](../paper_experiments/docs/小论文实验完善指令_完整修订版.md)
@@ -88,7 +88,7 @@ paper_experiments/
 
 - [期刊论文格式中文草稿](../paper_experiments/docs/journal_manuscript_draft_zh.md)
 - [小论文进一步完善稿 v5：当前推荐主稿](../paper_experiments/docs/小论文进一步完善稿_任务状态构建_YOLO_VLM_DKG_unknown_2026-07-01.md)
-- [论文方法与系统设计沉淀文档（补充写作材料，非系统规范）](paper_method_system_design_zh.md)
+- [论文方法与系统设计沉淀文档（历史补充写作材料，非系统规范）](../paper_experiments/docs/paper_method_system_design_zh.md)
 
 ---
 
@@ -105,7 +105,10 @@ docs/working/
 
 ```text
 knowledge_seed_zh.md
-  > paper_method_system_design_zh.md
+  > 当前代码和测试
+  > 子项目 README
   > paper_experiments/protocols/
   > 其他历史记录
 ```
+
+更准确的冲突优先级以仓库根目录 `AGENTS.md` 为准；论文草稿和补充写作材料不作为系统契约。

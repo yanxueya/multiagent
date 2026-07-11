@@ -21,6 +21,7 @@ PerceptionRunner = Callable[[str, WasteAgentState], dict[str, Any]]
 ExecutionRunner = Callable[[str, dict[str, Any], WasteAgentState], dict[str, Any]]
 ReviewPayloadLoader = Callable[[list[str], WasteAgentState], list[dict[str, Any]]]
 KnowledgeQueryRunner = Callable[[dict[str, Any]], dict[str, Any]]
+ActionExecutionLookup = Callable[[str], bool]
 
 
 def _empty_candidates(scene_id: str, instance_ids: list[str], goal: dict[str, Any]) -> Iterable[dict[str, Any]]:
@@ -43,6 +44,10 @@ def _missing_query_backend(goal: dict[str, Any]) -> dict[str, Any]:
     return {"status": "unavailable", "error": "knowledge_query_backend_not_connected"}
 
 
+def _action_not_recorded(action_id: str) -> bool:
+    return False
+
+
 @dataclass(slots=True)
 class GraphRuntime:
     """把外部感知、KG、ROS2 工具注入图中；这些服务本身不是 Agent。"""
@@ -52,8 +57,10 @@ class GraphRuntime:
     execution_runner: ExecutionRunner = _pending_execution
     review_payload_loader: ReviewPayloadLoader = _basic_review_payload
     knowledge_query_runner: KnowledgeQueryRunner = _missing_query_backend
+    action_already_executed: ActionExecutionLookup = _action_not_recorded
     kg_writer_backend: KGWriterBackend | None = None
     executed_action_ids: set[str] = field(default_factory=set)
+    transient_objects: dict[str, Any] = field(default_factory=dict)
 
 
 NodeName = Literal[
@@ -117,6 +124,8 @@ def supervisor_node(state: WasteAgentState, *, runtime: GraphRuntime | None = No
             "audit_trail": _append_audit(merged, "supervisor_agent", decision.to_dict()),
         }
     )
+    if decision.next_step == "complete":
+        updates["task_completed"] = True
     return updates
 
 
@@ -170,16 +179,20 @@ def perception_node(state: WasteAgentState, *, runtime: GraphRuntime | None = No
         }
     payload_keys = {
         "scene_id",
+        "observation_ref",
         "updated_instance_ids",
         "accepted_instance_ids",
         "review_instance_ids",
         "unknown_instance_ids",
-        "eligible_instance_ids",
         "events",
         "perception_completed",
     }
     payload = {key: result[key] for key in payload_keys if key in result}
     payload.setdefault("scene_id", scene_id)
+    if "observation" in result:
+        observation_ref = str(result.get("observation_ref") or f"memory://observation/{scene_id}")
+        runtime.transient_objects[observation_ref] = result["observation"]
+        payload["observation_ref"] = observation_ref
     return {
         "external_status": "",
         "pending_kg_write": {"write_type": "perception", "payload": payload},
@@ -264,7 +277,7 @@ def execution_node(state: WasteAgentState, *, runtime: GraphRuntime | None = Non
         return {"task_completed": True, "current_plan": {}, "plan_validated": False}
 
     action_id = str(plan.get("action_id", ""))
-    if action_id in runtime.executed_action_ids:
+    if action_id in runtime.executed_action_ids or runtime.action_already_executed(action_id):
         return {"error_message": f"duplicate_action_id={action_id}"}
     result = runtime.execution_runner("execute_action", plan, state)
     if result.get("execution_status") == "pending_external_execution":
@@ -273,9 +286,13 @@ def execution_node(state: WasteAgentState, *, runtime: GraphRuntime | None = Non
     physical_started = bool(result.get("physical_attempt_started", False))
     if not physical_started:
         remaining = [item for item in state.get("eligible_instance_ids", []) if item != plan.get("target_instance_id")]
+        review_ids = [str(item) for item in state.get("review_instance_ids", [])]
+        if not remaining and plan.get("target_instance_id"):
+            review_ids.append(str(plan["target_instance_id"]))
         return {
             "last_execution_result": dict(result),
             "eligible_instance_ids": remaining,
+            "review_instance_ids": list(dict.fromkeys(review_ids)),
             "current_plan": {},
             "plan_validated": False,
             "replan_required": True,
@@ -287,6 +304,8 @@ def execution_node(state: WasteAgentState, *, runtime: GraphRuntime | None = Non
     runtime.executed_action_ids.add(action_id)
     execution_result = {
         "action_id": action_id,
+        "scene_id": str(state.get("current_scene_id", "")),
+        "target_instance_id": str(plan.get("target_instance_id", "")),
         "execution_status": str(result["execution_status"]),
         "physical_attempt_started": True,
         "failure_reason": str(result.get("failure_reason", "")),
@@ -312,8 +331,17 @@ def human_review_interrupt_node(state: WasteAgentState, *, runtime: GraphRuntime
     review_results = resume_value if isinstance(resume_value, list) else [resume_value]
     if not all(isinstance(item, dict) and item.get("review_action") in payload["allowed_actions"] for item in review_results):
         raise ValueError("Invalid human review resume payload")
+    for item in review_results:
+        instance_id = str(item.get("instance_id", ""))
+        if instance_id not in review_ids:
+            raise ValueError(f"Human review target is not pending review: {instance_id}")
+        if item.get("review_action") == "confirm_existing" and not item.get("confirmed_category"):
+            raise ValueError("confirm_existing requires confirmed_category")
     return {
-        "pending_kg_write": {"write_type": "human_review", "payload": {"review_results": review_results, "events": []}},
+        "pending_kg_write": {
+            "write_type": "human_review",
+            "payload": {"scene_id": str(state.get("current_scene_id", "")), "review_results": review_results, "events": []},
+        },
         "audit_trail": _append_audit(state, "human_review_interrupt", {"review_count": len(review_results)}),
     }
 
@@ -336,8 +364,8 @@ def kg_writer_node(state: WasteAgentState, *, runtime: GraphRuntime | None = Non
                 "current_scene_id": str(payload.get("scene_id", state.get("current_scene_id", ""))),
                 "scene_is_fresh": True,
                 "perception_completed": bool(payload.get("perception_completed", True)),
-                "review_instance_ids": [str(item) for item in payload.get("review_instance_ids", [])],
-                "eligible_instance_ids": [str(item) for item in payload.get("eligible_instance_ids", [])],
+                "review_instance_ids": [str(item) for item in result.get("review_instance_ids", payload.get("review_instance_ids", []))],
+                "eligible_instance_ids": [str(item) for item in result.get("eligible_instance_ids", [])],
                 "current_plan": {},
                 "plan_validated": False,
                 "replan_required": False,

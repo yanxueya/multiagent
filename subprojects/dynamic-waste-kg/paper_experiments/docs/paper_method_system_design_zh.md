@@ -1,6 +1,6 @@
-﻿# 复杂动态建筑环境中的危险废弃物认知与人机协同自治决策：方法设计、实现过程与阶段性实验记录
+# 复杂动态建筑环境中的危险废弃物认知与人机协同自治决策：方法设计、实现过程与阶段性实验记录
 
-> 状态说明：本文是论文写作补充材料，不是当前系统字段或接口规范。知识图谱节点、关系、事件和规划边界必须以 [knowledge_seed_zh.md](knowledge_seed_zh.md)、当前代码和测试为准；本文中的历史字段仅用于追溯原型演进。
+> 状态说明：本文是历史论文写作补充材料，不是当前系统字段或接口规范。知识图谱节点、关系、事件和规划边界必须以 [knowledge_seed_zh.md](../../docs/knowledge_seed_zh.md)、当前代码和测试为准；本文中的历史字段仅用于追溯原型演进。
 
 > 本文档用于支撑后续科研论文写作，重点沉淀系统总体逻辑、数据与模型训练、双层动态知识图谱构建、YOLO 与大模型复核接入、Neo4j 可视化、以及面向后续 RealSense、LangGraph 和 ROS2 抓取规划的接口设计。  
 > 当前内容属于“方法与原型验证阶段”记录，适合后续扩展为论文的 Methodology、System Architecture、Prototype Implementation、Experimental Setup 和 Preliminary Results 部分。
@@ -232,13 +232,13 @@ CUDA runtime used by PyTorch: 12.8
 主模型训练目录：
 
 ```text
-outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50
+outputs/yolo_runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50
 ```
 
 主要参数来自：
 
 ```text
-outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/args.yaml
+outputs/yolo_runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/args.yaml
 ```
 
 关键训练配置：
@@ -313,23 +313,23 @@ outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e5
 
 训练曲线：
 
-![Training results](../outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/results.png)
+![Training results](../../outputs/yolo_runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/results.png)
 
 混淆矩阵：
 
-![Confusion matrix](../outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/confusion_matrix.png)
+![Confusion matrix](../../outputs/yolo_runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/confusion_matrix.png)
 
 归一化混淆矩阵：
 
-![Normalized confusion matrix](../outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/confusion_matrix_normalized.png)
+![Normalized confusion matrix](../../outputs/yolo_runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/confusion_matrix_normalized.png)
 
 Mask PR 曲线：
 
-![Mask PR curve](../outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/MaskPR_curve.png)
+![Mask PR curve](../../outputs/yolo_runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/MaskPR_curve.png)
 
 验证集预测示例：
 
-![Validation prediction](../outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/val_batch0_pred.jpg)
+![Validation prediction](../../outputs/yolo_runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/val_batch0_pred.jpg)
 
 ### 5.3 对机械臂抓取的影响
 
@@ -658,7 +658,7 @@ foam
 ```powershell
 .\.venv\Scripts\python.exe scripts\graph\predict_image_to_graph.py `
   --image datasets\waste12_yolo\images\val\instseg_mix07_rgb_0038_png_jpg.rf.f85422203eb2cdf1f58a20d17d16fc25.jpg `
-  --weights outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt `
+  --weights outputs\yolo_runs\segment\runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt `
   --out artifacts\single_image_llm_demo `
   --conf 0.5 `
   --device 0 `
@@ -734,7 +734,7 @@ artifacts/single_image_llm_demo
 
 预测图：
 
-![Single image prediction](../artifacts/single_image_llm_demo/prediction/instseg_mix07_rgb_0038_png_jpg.rf.f85422203eb2cdf1f58a20d17d16fc25.jpg)
+![Single image prediction](../../artifacts/single_image_llm_demo/prediction/instseg_mix07_rgb_0038_png_jpg.rf.f85422203eb2cdf1f58a20d17d16fc25.jpg)
 
 ### 11.2 Neo4j 图层
 
@@ -958,7 +958,7 @@ cd C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg
 ```powershell
 .\.venv\Scripts\python.exe scripts\graph\predict_image_to_graph.py `
   --image datasets\waste12_yolo\images\val\instseg_mix07_rgb_0038_png_jpg.rf.f85422203eb2cdf1f58a20d17d16fc25.jpg `
-  --weights outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt `
+  --weights outputs\yolo_runs\segment\runs\waste12_seg\yolo11n_seg_cdw_glass_e50\weights\best.pt `
   --out artifacts\single_image_llm_demo `
   --conf 0.5 `
   --device 0 `
@@ -995,10 +995,10 @@ OK
 
 | 图 | 路径 | 建议用途 |
 |---|---|---|
-| 训练曲线 | `outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/results.png` | 模型训练收敛与验证指标 |
-| 混淆矩阵 | `outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/confusion_matrix.png` | 类别混淆分析 |
-| Mask PR 曲线 | `outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/MaskPR_curve.png` | 分割性能分析 |
-| 验证集预测 | `outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/val_batch0_pred.jpg` | 模型预测可视化 |
+| 训练曲线 | `outputs/yolo_runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/results.png` | 模型训练收敛与验证指标 |
+| 混淆矩阵 | `outputs/yolo_runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/confusion_matrix.png` | 类别混淆分析 |
+| Mask PR 曲线 | `outputs/yolo_runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/MaskPR_curve.png` | 分割性能分析 |
+| 验证集预测 | `outputs/yolo_runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/val_batch0_pred.jpg` | 模型预测可视化 |
 | 单图预测 | `artifacts/single_image_llm_demo/prediction/instseg_mix07_rgb_0038_png_jpg.rf.f85422203eb2cdf1f58a20d17d16fc25.jpg` | YOLO + 图谱示例 |
 | Mermaid 图谱 | `artifacts/single_image_llm_demo/graph.mmd` | 图谱结构示意 |
 | Neo4j Cypher | `artifacts/single_image_llm_demo/neo4j_import.cypher` | 图数据库复现 |

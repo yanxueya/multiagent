@@ -4,7 +4,7 @@ import unittest
 
 from langgraph.types import Command
 
-from agent_system.graph import GraphRuntime, build_langgraph_app, choose_supervisor_decision, describe_graph
+from agent_system.graph import GraphRuntime, build_langgraph_app, choose_supervisor_decision, describe_graph, execution_node
 from agent_system.state import build_thread_config
 
 
@@ -149,7 +149,79 @@ class LangGraphArchitectureTests(unittest.TestCase):
         self.assertEqual(result["current_scene_id"], "scene_explore_001")
         self.assertTrue(result["perception_completed"])
         self.assertEqual(result["kg_write_result"]["write_type"], "perception")
+        self.assertEqual(result["eligible_instance_ids"], [])
         self.assertEqual(result["next_step"], "complete")
+
+    def test_nonphysical_planning_failure_does_not_complete_remaining_object(self) -> None:
+        def load_candidates(scene_id, instance_ids, goal):
+            return [
+                {
+                    "instance_id": "brick_01",
+                    "scene_id": scene_id,
+                    "candidate_class": "brick",
+                    "recognition_status": "accepted",
+                    "current_handling_policy": "auto_allowed",
+                    "task_status": "pending",
+                    "attempt_count": 0,
+                    "depth_valid_ratio": 0.92,
+                    "occlusion_state": "none",
+                    "graspability_prior": "medium",
+                    "near_neighbor_count": 0,
+                }
+            ]
+
+        def execute(operation, plan, state):
+            return {"execution_status": "planning_failure", "physical_attempt_started": False, "failure_reason": "no collision-free path"}
+
+        app = build_langgraph_app(runtime=GraphRuntime(candidate_loader=load_candidates, execution_runner=execute))
+        interrupted = app.invoke(
+            {
+                "task_id": "planning_failure",
+                "operation_mode": "supervised_execution",
+                "current_scene_id": "scene_001",
+                "scene_is_fresh": True,
+                "perception_completed": True,
+                "eligible_instance_ids": ["brick_01"],
+                "review_instance_ids": [],
+            },
+            config=build_thread_config("planning-failure-thread"),
+        )
+
+        self.assertIn("__interrupt__", interrupted)
+        self.assertFalse(interrupted.get("task_completed", False))
+        self.assertEqual(interrupted["review_instance_ids"], ["brick_01"])
+
+    def test_persisted_action_id_is_rejected_before_execution_runner(self) -> None:
+        calls = []
+        def should_not_execute(operation, plan, state):
+            calls.append(plan["action_id"])
+            return {"execution_status": "success", "physical_attempt_started": True}
+
+        runtime = GraphRuntime(
+            action_already_executed=lambda action_id: action_id == "action_existing",
+            execution_runner=should_not_execute,
+        )
+        result = execution_node(
+            {
+                "next_step": "execute",
+                "current_scene_id": "scene_001",
+                "scene_is_fresh": True,
+                "eligible_instance_ids": ["brick_01"],
+                "current_plan": {
+                    "action_id": "action_existing",
+                    "scene_id": "scene_001",
+                    "action_type": "robot_grasp",
+                    "target_instance_id": "brick_01",
+                    "destination": "brick_bin",
+                    "reason": "test",
+                    "replan_after_execution": True,
+                },
+            },
+            runtime=runtime,
+        )
+
+        self.assertEqual(result["error_message"], "duplicate_action_id=action_existing")
+        self.assertEqual(calls, [])
 
 
 if __name__ == "__main__":

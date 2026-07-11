@@ -145,7 +145,7 @@ python scripts/rgbd/predict_rgbd_to_graph.py \
   --image artifacts/captures/frame_001/color.png \
   --depth artifacts/captures/frame_001/aligned_depth.png \
   --intrinsics artifacts/captures/frame_001/camera_intrinsics.json \
-  --weights outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/weights/best.pt \
+  --weights outputs/yolo_runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/weights/best.pt \
   --out artifacts/rgbd_graph_frame_001 \
   --conf 0.5 \
   --imgsz 640 \
@@ -160,7 +160,7 @@ python scripts/rgbd/predict_rgbd_to_graph.py \
   --image artifacts/captures/frame_001/color.png \
   --depth artifacts/captures/frame_001/aligned_depth.png \
   --intrinsics artifacts/captures/frame_001/camera_intrinsics.json \
-  --weights outputs/yolo_runs/segment/outputs/yolo_runs/waste12_seg/yolo11n_seg_cdw_glass_e50/weights/best.pt \
+  --weights outputs/yolo_runs/segment/runs/waste12_seg/yolo11n_seg_cdw_glass_e50/weights/best.pt \
   --out artifacts/rgbd_graph_frame_001 \
   --conf 0.5 \
   --imgsz 640 \

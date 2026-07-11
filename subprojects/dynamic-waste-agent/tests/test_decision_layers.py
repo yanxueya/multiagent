@@ -74,6 +74,8 @@ class DecisionLayerTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "Undefined"):
             validate_kg_write({"write_type": "execution", "payload": {"execution_result": {}, "new_kg_property": 1}})
+        with self.assertRaisesRegex(ValueError, "Undefined"):
+            validate_kg_write({"write_type": "perception", "payload": {"eligible_instance_ids": ["brick_01"]}})
         with self.assertRaisesRegex(ValueError, "undefined fields"):
             validate_kg_write({"write_type": "planning", "payload": {}, "cypher": "MATCH (n) RETURN n"})
 

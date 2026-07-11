@@ -23,14 +23,14 @@
 训练目录：
 
 ```text
-C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_e50
+C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\outputs\yolo_runs\segment\runs\waste12_seg\yolo11n_seg_e50
 ```
 
 权重文件：
 
 ```text
-C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_e50\weights\best.pt
-C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_e50\weights\last.pt
+C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\outputs\yolo_runs\segment\runs\waste12_seg\yolo11n_seg_e50\weights\best.pt
+C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\outputs\yolo_runs\segment\runs\waste12_seg\yolo11n_seg_e50\weights\last.pt
 ```
 
 主要配置：
@@ -139,7 +139,7 @@ C:\Python314\python.exe
 第三步：重新验证 `best.pt`：
 
 ```powershell
-.\.venv\Scripts\python.exe -c "from ultralytics import YOLO; model=YOLO(r'outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_e50\weights\best.pt'); model.val(data=r'datasets\waste12_yolo\data.yaml', split='val', imgsz=640, batch=2, device=0, project=r'outputs\yolo_runs\waste12_val', name='e50_best_val', plots=True)"
+.\.venv\Scripts\python.exe -c "from ultralytics import YOLO; model=YOLO(r'outputs\yolo_runs\segment\runs\waste12_seg\yolo11n_seg_e50\weights\best.pt'); model.val(data=r'datasets\waste12_yolo\data.yaml', split='val', imgsz=640, batch=2, device=0, project=r'outputs\yolo_runs\waste12_val', name='e50_best_val', plots=True)"
 ```
 
 这里建议用 `batch=2`，降低内存压力。
@@ -175,13 +175,13 @@ C:\Python314\python.exe
 验证权重：
 
 ```text
-C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\outputs\yolo_runs\segment\outputs\yolo_runs\waste12_seg\yolo11n_seg_e50\weights\best.pt
+C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg\outputs\yolo_runs\segment\runs\waste12_seg\yolo11n_seg_e50\weights\best.pt
 ```
 
 验证输出：
 
 ```text
-C:\Users\12279\Documents\multiagent\outputs\yolo_runs\segment\outputs\yolo_runs\waste12_val\e50_best_val_b1
+C:\Users\12279\Documents\multiagent\outputs\yolo_runs\segment\runs\waste12_val\e50_best_val_b1
 ```
 
 整体指标：
