@@ -1,6 +1,8 @@
 """验证真实内存 KG 与 LangGraph 的单动作闭环。"""
 
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from agent_system.graph import GraphRuntime, build_langgraph_app
 from agent_system.integrations import WasteKgRuntimeAdapter
@@ -69,6 +71,40 @@ class WasteKgIntegrationTests(unittest.TestCase):
         self.assertEqual(sum(event.event_type == "ExecutionEvent" for event in graph.events), 1)
         self.assertTrue(adapter.action_already_executed(result["last_execution_result"]["action_id"]))
         self.assertEqual(runtime.transient_objects, {})
+
+    def test_writer_refreshes_neo4j_and_ui_snapshot_after_event(self) -> None:
+        class Mirror:
+            def __init__(self):
+                self.calls = 0
+
+            def sync_graph(self, graph):
+                self.calls += 1
+                return {"events": len(graph.events)}
+
+        graph = KnowledgeGraph()
+        seed_default_categories(graph)
+        mirror = Mirror()
+        with TemporaryDirectory() as temporary_dir:
+            output = Path(temporary_dir) / "kg-snapshot.json"
+            adapter = WasteKgRuntimeAdapter(graph, {}, mirror, output)
+            graph.apply_observation(Observation("scene_001", "camera", objects=[]))
+            result = adapter.write_backend(
+                {
+                    "write_type": "planning",
+                    "payload": {
+                        "action_plan": {"scene_id": "scene_001", "target_instance_id": "", "action_id": "action_1"},
+                        "planned_action": "no_action",
+                        "reason": "no candidate",
+                    },
+                }
+            )
+
+            self.assertEqual(result["neo4j_sync"]["status"], "synced")
+            self.assertEqual(result["ui_snapshot"]["status"], "published")
+            self.assertEqual(mirror.calls, 1)
+            self.assertTrue(output.exists())
+            self.assertIn("PlanningEvent", output.read_text(encoding="utf-8"))
+            self.assertIn("event_definitions", output.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

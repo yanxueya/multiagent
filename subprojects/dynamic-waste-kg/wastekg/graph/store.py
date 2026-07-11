@@ -20,6 +20,7 @@ from wastekg.core.models import (
     UnknownCluster,
     UnknownSample,
 )
+from wastekg.core.schema import EVENT_DEFINITIONS
 from wastekg.core.taxonomy import UNKNOWN_CATEGORY, canonicalize_category_name
 
 
@@ -46,9 +47,16 @@ ALLOWED_RELATIONS = {
 class KnowledgeGraph:
     """三层 KG：长期类别、短期场景记忆、七类事件节点。"""
 
-    def __init__(self, *, match_distance_threshold: float = 0.25, stale_after_seconds: int = 30) -> None:
+    def __init__(
+        self,
+        *,
+        match_distance_threshold: float = 0.25,
+        stale_after_seconds: int = 30,
+        id_namespace: str = "",
+    ) -> None:
         self.match_distance_threshold = match_distance_threshold
         self.stale_after_seconds = stale_after_seconds
+        self.id_namespace = id_namespace.removeprefix("scn_").strip("_")
         self.categories: Dict[str, CategorySpec] = {}
         self.scenes: Dict[str, Scene] = {}
         self.instances: Dict[str, ObjectInstance] = {}
@@ -58,6 +66,7 @@ class KnowledgeGraph:
         self.events: List[GraphEvent] = []
         self._track_map: Dict[str, str] = {}
         self._class_counters: Dict[str, int] = defaultdict(int)
+        self._instance_counter = 0
         self._unknown_counter = 0
         self._executed_action_ids: set[str] = set()
 
@@ -70,6 +79,9 @@ class KnowledgeGraph:
         candidate_class = canonicalize_category_name(candidate_class)
         prefix = candidate_class if candidate_class != UNKNOWN_CATEGORY else "unknown"
         self._class_counters[prefix] += 1
+        if self.id_namespace:
+            self._instance_counter += 1
+            return f"ins_{self.id_namespace}_{self._instance_counter:02d}"
         return f"{prefix}_{self._class_counters[prefix]:02d}"
 
     def upsert_instance(self, instance: ObjectInstance, *, source: str = "system") -> ObjectInstance:
@@ -158,7 +170,7 @@ class KnowledgeGraph:
             )
 
             review_decision = str(detected.metadata.get("review_decision", "not_checked")).lower()
-            if review_decision not in {"", "not_checked", "unknown"}:
+            if review_decision in {"support", "conflict"}:
                 vlm_event = GraphEvent(
                     event_type="VLMReviewEvent",
                     attributes={
@@ -222,12 +234,16 @@ class KnowledgeGraph:
     ) -> Dict[str, Any]:
         """应用文档列出的五种人工审核操作。"""
 
-        allowed = {"confirm_existing", "mark_unknown", "approve_robot", "forbid_robot", "discard_detection"}
+        allowed = set(EVENT_DEFINITIONS["HumanReviewEvent"]["attribute_enums"]["review_action"])
         if review_action not in allowed:
             raise ValueError(f"Unsupported review_action: {review_action}")
         event = GraphEvent("HumanReviewEvent", attributes={"review_action": review_action, "reason": reason})
         relations = [("REVIEWS", target_id)]
         instance = self.instances.get(target_id)
+        sample = self.unknown_samples.get(target_id)
+        cluster = self.unknown_clusters.get(target_id)
+        if instance is None and sample is None and cluster is None:
+            raise KeyError(f"Unknown human review target: {target_id}")
         if instance is not None:
             if review_action == "confirm_existing":
                 if not confirmed_category:
@@ -249,10 +265,25 @@ class KnowledgeGraph:
             elif review_action == "forbid_robot":
                 instance.current_handling_policy = "robot_forbidden"
             elif review_action == "discard_detection":
-                instance.current_handling_policy = "robot_forbidden"
-                instance.task_status = "completed"
-                self._track_map = {key: value for key, value in self._track_map.items() if value != target_id}
+                pass
+        elif review_action == "confirm_existing":
+            if not confirmed_category:
+                raise ValueError("confirm_existing requires confirmed_category")
+            category = canonicalize_category_name(confirmed_category)
+            if category not in self.categories:
+                raise ValueError(f"Unknown confirmed_category: {category}")
+            relations.append(("CONFIRMS", category))
+            if sample is not None:
+                sample.review_status = "confirmed_existing"
+                sample.human_label = category
+            elif cluster is not None:
+                cluster.review_status = "confirmed_existing"
+                cluster.candidate_category_name = category
+        else:
+            raise ValueError(f"{review_action} requires an ObjectInstance target")
         self._append_event(event, relations)
+        if instance is not None and review_action == "discard_detection":
+            self._remove_instance_from_current_state(target_id, keep_event_id=event.event_id)
         return {"event_id": event.event_id, "target_id": target_id, "review_action": review_action}
 
     def record_planning_event(
@@ -264,14 +295,17 @@ class KnowledgeGraph:
         reason: str = "",
         action_id: str = "",
     ) -> GraphEvent:
-        allowed = {"robot_grasp", "request_human_review", "rescan", "complete", "no_action"}
+        allowed = set(EVENT_DEFINITIONS["PlanningEvent"]["attribute_enums"]["planned_action"])
         if planned_action not in allowed:
             raise ValueError(f"Unsupported planned_action: {planned_action}")
         event_kwargs = {"event_id": action_id} if action_id else {}
         event = GraphEvent("PlanningEvent", attributes={"planned_action": planned_action, "reason": reason}, **event_kwargs)
         relations = [("IN_SCENE", scene_id)]
         if instance_id:
+            if instance_id not in self.instances:
+                raise KeyError(f"Unknown planning target: {instance_id}")
             relations.append(("SELECTS", instance_id))
+            self.instances[instance_id].task_status = "processing"
         self._append_event(event, relations)
         return event
 
@@ -291,7 +325,7 @@ class KnowledgeGraph:
             raise ValueError(f"Duplicate physical action_id: {action_id}")
         if not physical_attempt_started:
             raise ValueError("ExecutionEvent is only valid after a physical attempt starts")
-        if execution_result not in {"success", "failure"}:
+        if execution_result not in EVENT_DEFINITIONS["ExecutionEvent"]["attribute_enums"]["execution_result"]:
             raise ValueError("execution_result must be success or failure")
         instance = self.instances[instance_id]
         instance.attempt_count += 1
@@ -317,7 +351,7 @@ class KnowledgeGraph:
         reason: str,
         creates_category: Optional[CategorySpec] = None,
     ) -> GraphEvent:
-        allowed = {"assign_existing_category", "create_unknown_cluster", "propose_new_category", "promote_new_category", "discard_unknown"}
+        allowed = set(EVENT_DEFINITIONS["KnowledgeEvolutionEvent"]["attribute_enums"]["evolution_action"])
         if evolution_action not in allowed:
             raise ValueError(f"Unsupported evolution_action: {evolution_action}")
         event = GraphEvent("KnowledgeEvolutionEvent", attributes={"evolution_action": evolution_action, "reason": reason})
@@ -357,7 +391,7 @@ class KnowledgeGraph:
         )
 
     def list_active_instances(self) -> List[ObjectInstance]:
-        return [instance for instance in self.instances.values() if instance.task_status != "completed"]
+        return [instance for instance in self.instances.values() if instance.last_seen_scene and instance.task_status != "completed"]
 
     def has_execution_action(self, action_id: str) -> bool:
         """查询动作是否已有真实 ExecutionEvent，用于执行前幂等门控。"""
@@ -402,7 +436,7 @@ class KnowledgeGraph:
         if detected.temp_id in self._track_map and self._track_map[detected.temp_id] in self.instances:
             existing = self.instances[self._track_map[detected.temp_id]]
             return self._merge_detection(existing, detected, candidate_class, recognition_status, vlm_consistency, handling_policy, scene_id), False
-        candidate_id = self._match_existing(detected, candidate_class)
+        candidate_id = self._match_existing(detected, candidate_class) if self._has_spatial_identity(detected) else None
         if candidate_id is not None:
             return self._merge_detection(self.instances[candidate_id], detected, candidate_class, recognition_status, vlm_consistency, handling_policy, scene_id), False
         instance = ObjectInstance(
@@ -485,8 +519,13 @@ class KnowledgeGraph:
         if existing:
             return self.unknown_samples[existing[-1]]
         self._unknown_counter += 1
+        sample_id = (
+            f"unk_{self.id_namespace}_{self._unknown_counter:02d}"
+            if self.id_namespace
+            else f"unknown_sample_{self._unknown_counter:03d}"
+        )
         sample = UnknownSample(
-            sample_id=f"unknown_sample_{self._unknown_counter:03d}",
+            sample_id=sample_id,
             crop_ref=instance.crop_ref,
             mask_ref=instance.mask_ref,
             yolo_topk=dict((detected.metadata.get("yolo_topk") if detected else {}) or {instance.class_name: instance.yolo_confidence}),
@@ -500,6 +539,21 @@ class KnowledgeGraph:
         self.events.append(event)
         for relation, target_id in relations:
             self.add_relation(RelationEdge(event.event_id, relation, target_id))
+
+    def _remove_instance_from_current_state(self, instance_id: str, *, keep_event_id: str) -> None:
+        """移除误检的当前状态关系，但保留事件到该节点的审计证据。"""
+
+        instance = self.instances[instance_id]
+        instance.last_seen_scene = ""
+        self._track_map = {key: value for key, value in self._track_map.items() if value != instance_id}
+        retained: Dict[Tuple[str, str, str], RelationEdge] = {}
+        for edge in self.edges.values():
+            is_event_evidence = edge.target_id == instance_id and (
+                edge.source_id == keep_event_id or any(event.event_id == edge.source_id for event in self.events)
+            )
+            if instance_id not in {edge.source_id, edge.target_id} or is_event_evidence:
+                retained[edge.key()] = edge
+        self.edges = retained
 
     def _match_existing(self, detected: DetectedObject, candidate_class: str) -> Optional[str]:
         best_id: Optional[str] = None
@@ -518,18 +572,31 @@ class KnowledgeGraph:
         relations: List[DetectedRelation] = []
         for index, source in enumerate(objects):
             for target in objects[index + 1 :]:
+                if not self._has_spatial_identity(source) or not self._has_spatial_identity(target):
+                    continue
                 if self._distance(source.center_xyz, target.center_xyz) <= 0.30:
                     relations.append(DetectedRelation(source.temp_id, "near", target.temp_id))
         return relations
 
     @staticmethod
     def _has_depth_update(detected: DetectedObject) -> bool:
+        metadata_ratio = detected.metadata.get("depth_valid_ratio")
+        try:
+            metadata_has_depth = metadata_ratio is not None and float(metadata_ratio) > 0.0
+        except (TypeError, ValueError):
+            metadata_has_depth = False
         return bool(
-            detected.depth_valid_ratio
-            or detected.metadata.get("depth_valid_ratio") is not None
+            detected.depth_valid_ratio > 0.0
+            or metadata_has_depth
             or any(detected.center_xyz)
             or any(detected.observed_extent_3d)
         )
+
+    @staticmethod
+    def _has_spatial_identity(detected: DetectedObject) -> bool:
+        """没有有效深度时禁止仅凭同类别零坐标合并多个实例。"""
+
+        return detected.depth_valid_ratio > 0.0 and any(detected.center_xyz)
 
     @staticmethod
     def _bbox_from_metadata(metadata: Dict[str, Any]) -> Optional[Tuple[float, float, float, float]]:

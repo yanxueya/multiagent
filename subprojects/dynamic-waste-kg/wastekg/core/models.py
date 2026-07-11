@@ -7,6 +7,16 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import uuid4
 
+from wastekg.core.schema import (
+    CATEGORY_ATTRIBUTE_ENUMS,
+    EVENT_ATTRIBUTE_FIELDS,
+    EVENT_DEFINITIONS,
+    EVENT_SOURCES,
+    INSTANCE_ATTRIBUTE_ENUMS,
+    UNKNOWN_SAMPLE_REVIEW_STATUSES,
+    VISUAL_ATTRIBUTE_ENUMS,
+)
+
 Vector3 = Tuple[float, float, float]
 Quaternion = Tuple[float, float, float, float]
 BBox3D = Tuple[float, float, float, float, float, float]
@@ -28,6 +38,21 @@ class CategorySpec:
     vlm_review_policy: str = "threshold_based"
     default_handling_policy: str = "human_confirmation_required"
     visual_prototype: Dict[str, List[str]] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("category name must not be empty")
+        for field_name, allowed in CATEGORY_ATTRIBUTE_ENUMS.items():
+            value = getattr(self, field_name)
+            if value not in allowed:
+                raise ValueError(f"Unsupported {field_name}: {value}")
+        unknown_fields = set(self.visual_prototype) - set(VISUAL_ATTRIBUTE_ENUMS)
+        if unknown_fields:
+            raise ValueError(f"Unsupported visual_prototype fields: {sorted(unknown_fields)}")
+        for field_name, values in self.visual_prototype.items():
+            invalid = set(values) - set(VISUAL_ATTRIBUTE_ENUMS[field_name])
+            if invalid:
+                raise ValueError(f"Unsupported {field_name} values: {sorted(invalid)}")
 
     @property
     def category_name(self) -> str:
@@ -140,6 +165,12 @@ class ObjectInstance:
     updated_at: datetime = field(default_factory=_utc_now, repr=False)
     last_seen_scene: str = field(default="", repr=False)
 
+    def __post_init__(self) -> None:
+        for field_name, allowed in INSTANCE_ATTRIBUTE_ENUMS.items():
+            value = getattr(self, field_name)
+            if value not in allowed:
+                raise ValueError(f"Unsupported {field_name}: {value}")
+
     def touch(self, *, scene_id: str) -> None:
         self.updated_at = _utc_now()
         self.last_seen_scene = scene_id
@@ -174,6 +205,10 @@ class UnknownSample:
     vlm_attributes: Dict[str, Any] = field(default_factory=dict)
     review_status: str = "pending"
     human_label: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        if self.review_status not in UNKNOWN_SAMPLE_REVIEW_STATUSES:
+            raise ValueError(f"Unsupported UnknownSample review_status: {self.review_status}")
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -224,28 +259,6 @@ class RelationEdge:
         return {"source_id": self.source_id, "relation": self.relation, "target_id": self.target_id}
 
 
-EVENT_SOURCES = {
-    "DetectionEvent": "yolo_detector",
-    "VLMReviewEvent": "vlm_service",
-    "DepthUpdateEvent": "depth_processor",
-    "HumanReviewEvent": "human_reviewer",
-    "PlanningEvent": "task_planner",
-    "ExecutionEvent": "robot_controller",
-    "KnowledgeEvolutionEvent": "knowledge_updater",
-}
-
-EVENT_ATTRIBUTE_FIELDS = {
-    "DetectionEvent": {"yolo_confidence", "bbox_2d", "mask_ref", "crop_ref"},
-    "VLMReviewEvent": {"image_quality", "visual_attributes", "consistency", "reason"},
-    "DepthUpdateEvent": {"center_xyz_camera", "depth_valid_ratio", "observed_extent_3d", "occlusion_state"},
-    "HumanReviewEvent": {"review_action", "reason"},
-    "PlanningEvent": {"planned_action", "reason"},
-    # action_id 用于 LangGraph 恢复时的物理动作幂等保护；只有真实动作开始后才允许写入该事件。
-    "ExecutionEvent": {"action_id", "physical_attempt_started", "execution_result", "failure_reason"},
-    "KnowledgeEvolutionEvent": {"evolution_action", "reason"},
-}
-
-
 @dataclass(slots=True)
 class GraphEvent:
     """七类事件节点的统一容器，字段集合由事件类型严格约束。"""
@@ -267,6 +280,11 @@ class GraphEvent:
         unsupported = set(self.attributes) - EVENT_ATTRIBUTE_FIELDS[self.event_type]
         if unsupported:
             raise ValueError(f"Unsupported {self.event_type} attributes: {sorted(unsupported)}")
+        enum_fields = EVENT_DEFINITIONS[self.event_type]["attribute_enums"]
+        for field_name, allowed in enum_fields.items():
+            value = self.attributes.get(field_name)
+            if value not in allowed:
+                raise ValueError(f"Unsupported {self.event_type}.{field_name}: {value}")
 
     @property
     def timestamp(self) -> datetime:

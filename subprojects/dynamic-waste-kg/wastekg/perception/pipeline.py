@@ -124,6 +124,8 @@ def build_records_with_optional_review(
                     review_decision = "unknown"
                 else:
                     review_decision = "conflict"
+            if review_decision in {"insufficient", "unknown", "uncertain"}:
+                review_decision = "conflict"
             record["llm_class_name"] = llm_class_name
             record["llm_confidence"] = review.confidence
             record["risk_hint"] = review.risk_hint
@@ -131,13 +133,13 @@ def build_records_with_optional_review(
             record["metadata"].update(
                 {
                     "review_reason": review.reason,
-                    "need_human_review": review.need_human_review or review_decision in {"conflict", "insufficient", "unknown"},
+                    "need_human_review": review.need_human_review or review_decision == "conflict",
                     "review_decision": review_decision,
                     "vlm_consistency_status": review.consistency_status if review.consistency_status != "not_checked" else review_decision,
                     "vlm_consistency_score": review.consistency_score,
                     "visual_attributes": dict(review.visual_attributes),
                     "candidate_class": yolo_class_name,
-                    "recognition_status": "accepted" if review_decision == "support" else ("unknown" if review_decision in {"conflict", "unknown"} else "review_required"),
+                    "recognition_status": "accepted" if review_decision == "support" else ("unknown" if review_decision == "conflict" else "review_required"),
                 }
             )
         elif policy.needs_review(yolo_class_name, yolo_confidence):
@@ -169,6 +171,7 @@ def apply_perception_records_to_graph(
     relation_hints: Optional[Iterable[Dict[str, Any]]] = None,
     reviewer: Optional[LightweightReviewer] = None,
     camera_pose: Optional[Dict[str, Any]] = None,
+    metadata: Optional[Dict[str, Any]] = None,
     allowed_classes: Optional[List[str]] = None,
 ) -> Tuple[VisionPacket, Dict[str, Any]]:
     reviewed_records = build_records_with_optional_review(
@@ -182,6 +185,7 @@ def apply_perception_records_to_graph(
         detections=reviewed_records,
         relation_hints=relation_hints,
         camera_pose=camera_pose,
+        metadata=metadata,
     )
     result = graph.apply_observation(vision_packet_to_observation(packet))
     return packet, result

@@ -29,6 +29,8 @@ forbid_robot
 discard_detection
 ```
 
+`discard_detection` 表示人工确认候选为误检：KG Writer 将其移出当前 Scene 和规划候选，但保留事件到该实例的历史审计证据；不得新增 `rejected` 属性，也不得把它标记成抓取 `completed`。
+
 ## Resume 载荷
 
 ```json

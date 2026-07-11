@@ -70,6 +70,27 @@ class VisionBridgeTests(unittest.TestCase):
         self.assertEqual(graph.instances["brick_01"].current_handling_policy, "auto_allowed")
         self.assertEqual(graph.resolve_instance_category("brick_01"), "brick")
 
+    def test_rgb_only_detection_does_not_create_depth_event(self) -> None:
+        graph = KnowledgeGraph()
+        seed_default_categories(graph)
+        packet = build_vision_packet_from_records(
+            frame_id="rgb_only_001",
+            source="single_image_yolo",
+            detections=[
+                {
+                    "temp_id": "d1",
+                    "yolo_class_name": "paperboard",
+                    "yolo_confidence": 0.08,
+                    "metadata": {"pixel_center_xy": [120.0, 80.0]},
+                }
+            ],
+        )
+
+        graph.apply_observation(vision_packet_to_observation(packet))
+
+        self.assertEqual(sum(event.event_type == "DetectionEvent" for event in graph.events), 1)
+        self.assertEqual(sum(event.event_type == "DepthUpdateEvent" for event in graph.events), 0)
+
     def test_segmentation_and_grasp_fields_enter_short_term_memory(self) -> None:
         graph = KnowledgeGraph()
         seed_default_categories(graph)

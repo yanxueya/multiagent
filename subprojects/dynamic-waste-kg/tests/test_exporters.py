@@ -2,7 +2,7 @@
 
 import unittest
 
-from wastekg import graph_events_to_jsonl, graph_to_mermaid, graph_to_neo4j_cypher, seed_default_categories
+from wastekg import graph_events_to_jsonl, graph_to_mermaid, graph_to_neo4j_cypher, seed_default_categories, stabilize_event_ids
 from wastekg.core.models import DetectedObject, Observation
 from wastekg.graph.store import KnowledgeGraph
 
@@ -50,6 +50,14 @@ class ExporterTests(unittest.TestCase):
         lines = [line for line in graph_events_to_jsonl(self.graph).splitlines() if line]
         self.assertTrue(lines)
         self.assertTrue(all("Event" in line for line in lines))
+
+    def test_offline_event_ids_can_be_stabilized_without_breaking_edges(self) -> None:
+        stabilize_event_ids(self.graph, namespace="same-input")
+        first_ids = [event.event_id for event in self.graph.events]
+        first_edges = list(self.graph.edges)
+        stabilize_event_ids(self.graph, namespace="same-input")
+        self.assertEqual([event.event_id for event in self.graph.events], first_ids)
+        self.assertEqual(list(self.graph.edges), first_edges)
 
 
 if __name__ == "__main__":

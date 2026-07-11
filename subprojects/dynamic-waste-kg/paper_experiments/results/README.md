@@ -1,5 +1,9 @@
 # 小论文实验结果索引
 
+## 人工标注知识图谱示例
+
+`annotated_kg_examples/` 由 `scripts/graph/build_annotated_kg_examples.py` 生成，包含三张人工标注图片的说明性 KG 快照、事件流、Neo4j Cypher 和假设清单。该目录中的置信度和执行事件属于流程夹具，不是模型测量或真实机器人验证结果。
+
 ## 已固定证据
 
 - E0 数据审计：`artifacts/e0_waste11_grouped_v1_r3`

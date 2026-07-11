@@ -273,8 +273,8 @@ def execution_node(state: WasteAgentState, *, runtime: GraphRuntime | None = Non
         return {"scene_is_fresh": False, "current_plan": {}, "plan_validated": False, "replan_required": True}
     if action_type == "request_human_review":
         return {"review_instance_ids": [str(plan.get("target_instance_id", ""))], "current_plan": {}, "plan_validated": False}
-    if action_type in {"complete", "no_action"}:
-        return {"task_completed": True, "current_plan": {}, "plan_validated": False}
+    if action_type == "no_action":
+        return {"current_plan": {}, "plan_validated": False, "replan_required": False}
 
     action_id = str(plan.get("action_id", ""))
     if action_id in runtime.executed_action_ids or runtime.action_already_executed(action_id):

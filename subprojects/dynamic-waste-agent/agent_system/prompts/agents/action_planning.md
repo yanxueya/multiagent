@@ -48,7 +48,6 @@ occlusion_state == none
 robot_grasp
 request_human_review
 rescan
-complete
 no_action
 ```
 
@@ -56,7 +55,7 @@ no_action
 - 待人工复核对象影响任务：`request_human_review`。
 - 有合格候选：`robot_grasp`。
 - 无合格候选且任务状态未确认完成：`no_action`。
-- 任务完成只能在 Supervisor 已提供完成证据时使用 `complete`。
+- 任务是否完成只由 Supervisor 根据目标和最新 KG 状态判断，Action Planning Agent 不输出 `complete`。
 
 ## 不可违反的规则
 
@@ -73,7 +72,7 @@ no_action
 {
   "action_id": "action_001",
   "scene_id": "scene_001",
-  "action_type": "robot_grasp | request_human_review | rescan | complete | no_action",
+  "action_type": "robot_grasp | request_human_review | rescan | no_action",
   "target_instance_id": "obj_001",
   "destination": "brick_bin",
   "reason": "",

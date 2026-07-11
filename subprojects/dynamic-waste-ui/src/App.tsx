@@ -45,7 +45,9 @@ import {
   type ReviewQueueItem,
   type WasteInstance,
 } from "./lib/dashboard";
-import { adaptKnowledgeGraphSnapshot, type AdaptedKgDashboardData, type KgSnapshot } from "./lib/kgAdapter";
+import { adaptKnowledgeGraphSnapshot, type AdaptedKgDashboardData, type KgCategoryView, type KgEventDefinitionView, type KgEventView, type KgSchemaView, type KgSnapshot } from "./lib/kgAdapter";
+
+type KnowledgeLayer = "long_term" | "short_term" | "event_log";
 
 const navItems: Array<{ id: DashboardView; label: string; icon: LucideIcon }> = [
   { id: "overview", label: "系统总览", icon: Activity },
@@ -73,10 +75,12 @@ export default function App() {
   const [reviewAction, setReviewAction] = useState("等待人工确认");
   const [kgData, setKgData] = useState<AdaptedKgDashboardData | null>(null);
   const [kgLoadStatus, setKgLoadStatus] = useState<"loading" | "loaded" | "fallback">("loading");
+  const [kgUpdatedAt, setKgUpdatedAt] = useState("");
+  const [kgRefreshToken, setKgRefreshToken] = useState(0);
 
   useEffect(() => {
     let active = true;
-    fetch("/data/kg-snapshot.json", { cache: "no-store" })
+    const loadSnapshot = () => fetch("/data/kg-snapshot.json", { cache: "no-store" })
       .then((response) => {
         if (!response.ok) throw new Error(`KG snapshot HTTP ${response.status}`);
         return response.json() as Promise<KgSnapshot>;
@@ -86,18 +90,27 @@ export default function App() {
         const adapted = adaptKnowledgeGraphSnapshot(snapshot);
         setKgData(adapted);
         setKgLoadStatus("loaded");
+        setKgUpdatedAt(new Date().toLocaleTimeString("zh-CN", { hour12: false }));
+        setSelectedInstanceId((current) => adapted.instances.some((item) => item.instance_id === current) ? current : (adapted.instances[0]?.instance_id ?? current));
+        setSelectedGraphNodeId((current) => adapted.graphNodes.some((node) => node.id === current) ? current : (adapted.instances[0]?.instance_id ?? adapted.graphNodes[0]?.id ?? current));
       })
       .catch(() => {
         if (active) setKgLoadStatus("fallback");
       });
+    loadSnapshot();
     return () => {
       active = false;
     };
-  }, []);
+  }, [kgRefreshToken]);
 
   const instances = kgData?.instances ?? fallbackInstances;
   const graphNodes = kgData?.graphNodes ?? fallbackGraphNodes;
   const graphEdges = kgData?.graphEdges ?? fallbackGraphEdges;
+  const categories = kgData?.categories ?? [];
+  const kgEvents = kgData?.events ?? [];
+  const eventDefinitions = kgData?.eventDefinitions ?? [];
+  const kgSchema = kgData?.schema ?? { nodeFields: {}, categoryAttributeEnums: {}, instanceAttributeEnums: {}, unknownSampleReviewStatuses: [] };
+  const kgProvenance = kgData?.provenance ?? { evidenceLevel: "unspecified", modelInferenceUsed: false, trainingUsed: false };
   const reviewQueue = useMemo(() => deriveReviewQueue(instances), [instances]);
   const selectedAgent = agentTrace.find((node) => node.id === selectedAgentId) ?? agentTrace[0];
   const selectedRun = agentTraceRuns.find((run) => run.id === selectedRunId) ?? agentTraceRuns[0];
@@ -125,6 +138,11 @@ export default function App() {
     instances,
     graphNodes,
     graphEdges,
+    categories,
+    kgEvents,
+    eventDefinitions,
+    kgSchema,
+    kgProvenance,
     reviewQueue,
     selectedInstance,
     selectedGraphNode,
@@ -197,6 +215,8 @@ export default function App() {
             <KnowledgeWorkspace
               {...commonProps}
               kgLoadStatus={kgLoadStatus}
+              kgUpdatedAt={kgUpdatedAt}
+              onRefresh={() => setKgRefreshToken((current) => current + 1)}
             />
           )}
           {activeView === "review" && (
@@ -220,6 +240,11 @@ interface WorkspaceDataProps {
   instances: WasteInstance[];
   graphNodes: GraphNode[];
   graphEdges: Array<{ from: string; to: string }>;
+  categories: KgCategoryView[];
+  kgEvents: KgEventView[];
+  eventDefinitions: KgEventDefinitionView[];
+  kgSchema: KgSchemaView;
+  kgProvenance: AdaptedKgDashboardData["provenance"];
   reviewQueue: ReviewQueueItem[];
   selectedInstance: WasteInstance;
   selectedGraphNode: GraphNode;
@@ -353,17 +378,22 @@ function SimulationWorkspace({ instances, selectedInstance, onSelectInstance }: 
   );
 }
 
-function KnowledgeWorkspace({ instances, graphNodes, graphEdges, selectedInstance, selectedGraphNode, connectedGraphNodeIds, selectGraphNode, kgLoadStatus }: WorkspaceDataProps & { kgLoadStatus: "loading" | "loaded" | "fallback" }) {
+function KnowledgeWorkspace({ instances, graphNodes, graphEdges, categories, kgEvents, eventDefinitions, kgSchema, kgProvenance, selectedInstance, selectedGraphNode, connectedGraphNodeIds, selectGraphNode, kgLoadStatus, kgUpdatedAt, onRefresh }: WorkspaceDataProps & { kgLoadStatus: "loading" | "loaded" | "fallback"; kgUpdatedAt: string; onRefresh: () => void }) {
+  const [activeLayer, setActiveLayer] = useState<KnowledgeLayer>("long_term");
   return (
     <div className="kg-workspace">
-      <Panel className="full-panel kg-main-panel" icon={Network} title="知识图谱局部状态" meta={kgLoadStatus === "loaded" ? "已接入项目 KG 快照" : "演示数据"}>
-        <KgLayerSummary instances={instances} nodes={graphNodes} />
-        <KnowledgeGraphView nodes={graphNodes} edges={graphEdges} selectedNodeId={selectedGraphNode.id} connectedNodeIds={connectedGraphNodeIds} onSelectNode={selectGraphNode} />
+      <Panel className={`full-panel kg-main-panel ${kgProvenance.evidenceLevel.startsWith("illustrative") ? "has-provenance" : ""}`} icon={Network} title="三层知识图谱" meta={kgLoadStatus === "loaded" ? `快照更新于 ${kgUpdatedAt || "等待"}` : "演示数据"} actionLabel="刷新快照" onAction={onRefresh}>
+        <KgLayerSummary instances={instances} nodes={graphNodes} events={kgEvents} eventDefinitions={eventDefinitions} activeLayer={activeLayer} onSelectLayer={setActiveLayer} />
+        {kgProvenance.evidenceLevel.startsWith("illustrative") && <div className="kg-provenance-note"><ShieldAlert size={13} /><span>人工标注流程夹具：未运行模型，ExecutionEvent 不代表真实机器人验证。</span></div>}
+        <div className="kg-content-grid">
+          <KnowledgeGraphView nodes={graphNodes} edges={graphEdges} selectedNodeId={selectedGraphNode.id} connectedNodeIds={connectedGraphNodeIds} onSelectNode={selectGraphNode} />
+          <KnowledgeLedger activeLayer={activeLayer} categories={categories} events={kgEvents} eventDefinitions={eventDefinitions} schema={kgSchema} nodes={graphNodes} edges={graphEdges} selectedNodeId={selectedGraphNode.id} onSelectNode={selectGraphNode} />
+        </div>
       </Panel>
-      <Panel className="full-panel kg-inspector-panel" icon={Layers3} title="实例状态谓词" meta={selectedInstance.instance_id}>
-        <InstanceStateCard instance={selectedInstance} expanded />
+      <Panel className="full-panel kg-inspector-panel" icon={Layers3} title="知识检查器" meta={selectedGraphNode.layer ?? selectedGraphNode.kind}>
         <div className="kg-boundary-note"><ShieldAlert size={15} /><span>KG 保存事实、状态、约束和类别属性；动作顺序、重试策略仍由规划智能体生成。</span></div>
         <GraphNodeInspector node={selectedGraphNode} />
+        {selectedGraphNode.kind === "instance" && <InstanceStateCard instance={selectedInstance} expanded />}
       </Panel>
     </div>
   );
@@ -431,12 +461,24 @@ function CompactReviewList({ queue, selectedId, onSelect }: { queue: ReviewQueue
 
 function AlertIcon({ status }: { status: string }) { return status === "conflict" ? <ShieldAlert size={16} /> : <CircleHelp size={16} />; }
 
-function KgLayerSummary({ instances, nodes }: { instances: WasteInstance[]; nodes: GraphNode[] }) {
+function KgLayerSummary({ instances, nodes, events, eventDefinitions, activeLayer, onSelectLayer }: { instances: WasteInstance[]; nodes: GraphNode[]; events: KgEventView[]; eventDefinitions: KgEventDefinitionView[]; activeLayer: KnowledgeLayer; onSelectLayer: (layer: KnowledgeLayer) => void }) {
   const categories = nodes.filter((node) => node.kind === "category").length;
-  return <div className="kg-layer-summary"><div><span>长期知识</span><strong>{categories} 类</strong><small>类别先验与处理权限</small></div><ArrowRight size={15} /><div><span>短期记忆</span><strong>{instances.length} 实例</strong><small>Scene、实例与 unknown</small></div><ArrowRight size={15} /><div><span>事件日志</span><strong>Append-only</strong><small>7 类固定事件节点</small></div></div>;
+  return <div className="kg-layer-summary"><button className={activeLayer === "long_term" ? "active" : ""} onClick={() => onSelectLayer("long_term")} type="button"><span>长期知识层</span><strong>{categories} 类</strong><small>稳定先验与视觉原型</small></button><ArrowRight size={15} /><button className={activeLayer === "short_term" ? "active" : ""} onClick={() => onSelectLayer("short_term")} type="button"><span>短期记忆层</span><strong>{instances.length} 实例</strong><small>Scene、实例与 unknown</small></button><ArrowRight size={15} /><button className={activeLayer === "event_log" ? "active" : ""} onClick={() => onSelectLayer("event_log")} type="button"><span>事件日志层</span><strong>{events.length} 实例</strong><small>{eventDefinitions.length} 类事件定义</small></button></div>;
 }
 
-function KnowledgeGraphView({ nodes, edges, selectedNodeId, connectedNodeIds, onSelectNode }: { nodes: GraphNode[]; edges: Array<{ from: string; to: string }>; selectedNodeId: string; connectedNodeIds: Set<string>; onSelectNode: (node: GraphNode) => void }) {
+function SchemaCatalog({ schema, scope }: { schema: KgSchemaView; scope: "long_term" | "short_term" }) {
+  if (scope === "long_term") return <div className="kg-schema-catalog"><strong>允许值域</strong><span>graspability_prior: {(schema.categoryAttributeEnums.graspability_prior ?? []).join(" / ")}</span></div>;
+  return <div className="kg-schema-catalog"><details><summary>ObjectInstance 枚举</summary><span>vlm_consistency: {(schema.instanceAttributeEnums.vlm_consistency ?? []).join(" / ")}</span><span>task_status: {(schema.instanceAttributeEnums.task_status ?? []).join(" / ")}</span></details><details><summary>UnknownSample · {(schema.nodeFields.UnknownSample ?? []).length} 字段</summary><span>{(schema.nodeFields.UnknownSample ?? []).join(" · ")}</span></details><details><summary>UnknownCluster · {(schema.nodeFields.UnknownCluster ?? []).length} 字段</summary><span>{(schema.nodeFields.UnknownCluster ?? []).join(" · ")}</span></details></div>;
+}
+
+function KnowledgeLedger({ activeLayer, categories, events, eventDefinitions, schema, nodes, edges, selectedNodeId, onSelectNode }: { activeLayer: KnowledgeLayer; categories: KgCategoryView[]; events: KgEventView[]; eventDefinitions: KgEventDefinitionView[]; schema: KgSchemaView; nodes: GraphNode[]; edges: Array<{ from: string; to: string; relation?: string }>; selectedNodeId: string; onSelectNode: (node: GraphNode) => void }) {
+  const nodeById = (id: string) => nodes.find((node) => node.id === id);
+  if (activeLayer === "long_term") return <div className="kg-ledger"><div className="kg-ledger-title"><strong>11 类知识目录</strong><small>点击查看属性</small></div><div className="kg-ledger-list"><SchemaCatalog schema={schema} scope="long_term" />{categories.map((category) => { const node = nodeById(category.category_name); return <button key={category.category_name} className={selectedNodeId === category.category_name ? "selected" : ""} onClick={() => node && onSelectNode(node)} type="button"><span>{category.category_name}</span><small>{category.risk_level} · {category.default_handling_policy}</small></button>; })}</div></div>;
+  if (activeLayer === "short_term") return <div className="kg-ledger"><div className="kg-ledger-title"><strong>当前场景记忆</strong><small>Scene / Instance / Unknown</small></div><div className="kg-ledger-list"><SchemaCatalog schema={schema} scope="short_term" />{nodes.filter((node) => node.layer === "short_term").map((node) => <button key={node.id} className={selectedNodeId === node.id ? "selected" : ""} onClick={() => onSelectNode(node)} type="button"><span>{node.label}</span><small>{nodeKindLabel(node.kind)}</small></button>)}</div></div>;
+  return <div className="kg-ledger event-ledger"><div className="kg-ledger-title"><strong>七类事件目录</strong><small>{events.length} 个实际事件</small></div><div className="kg-event-definitions">{eventDefinitions.map((definition) => <details key={definition.event_type}><summary><strong>{definition.event_type}</strong><small>{definition.source}</small></summary><p>{definition.trigger}</p><dl><div><dt>前置</dt><dd>{definition.preconditions.join("；")}</dd></div><div><dt>关系</dt><dd>{definition.relations.join("；")}</dd></div><div><dt>变更</dt><dd>{definition.effects.join("；")}</dd></div></dl></details>)}</div><div className="kg-ledger-title"><strong>实际事件流</strong><small>最新优先</small></div><div className="kg-event-stream">{[...events].reverse().map((event) => { const node = nodeById(event.event_id); const link = edges.find((edge) => edge.from === event.event_id); return <button key={event.event_id} className={selectedNodeId === event.event_id ? "selected" : ""} onClick={() => node && onSelectNode(node)} type="button"><span className="event-dot" /><span><strong>{event.event_type}</strong><small>{event.event_source}</small><em>{link ? `${link.relation} → ${link.to}` : "已追加，未关联目标"}</em></span></button>; })}</div></div>;
+}
+
+function KnowledgeGraphView({ nodes, edges, selectedNodeId, connectedNodeIds, onSelectNode }: { nodes: GraphNode[]; edges: Array<{ from: string; to: string; relation?: string }>; selectedNodeId: string; connectedNodeIds: Set<string>; onSelectNode: (node: GraphNode) => void }) {
   const selected = nodes.find((node) => node.id === selectedNodeId) ?? nodes[0];
   const neighbours = nodes.filter((node) => node.id !== selected.id && connectedNodeIds.has(node.id)).slice(0, 7);
   const visible = [selected, ...neighbours];
@@ -449,12 +491,14 @@ function KnowledgeGraphView({ nodes, edges, selectedNodeId, connectedNodeIds, on
   const visibleIds = new Set(visible.map((node) => node.id));
   return <div className="kg-canvas"><svg viewBox="0 0 640 310" role="img" aria-label="选中节点的知识图谱局部关系">
     <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" /></marker></defs>
-    {edges.filter((edge) => visibleIds.has(edge.from) && visibleIds.has(edge.to)).map((edge) => { const from = positions.get(edge.from)!; const to = positions.get(edge.to)!; return <line key={`${edge.from}-${edge.to}`} x1={from.x} y1={from.y} x2={to.x} y2={to.y} markerEnd="url(#arrow)" />; })}
+    {edges.filter((edge) => visibleIds.has(edge.from) && visibleIds.has(edge.to)).map((edge) => { const from = positions.get(edge.from)!; const to = positions.get(edge.to)!; return <g key={`${edge.from}-${edge.relation}-${edge.to}`}><line x1={from.x} y1={from.y} x2={to.x} y2={to.y} markerEnd="url(#arrow)" /><text className="edge-label" x={(from.x + to.x) / 2} y={(from.y + to.y) / 2 - 4} textAnchor="middle">{edge.relation}</text></g>; })}
     {visible.map((node) => { const point = positions.get(node.id)!; const label = node.label.length > 22 ? `${node.label.slice(0, 20)}…` : node.label; return <g key={node.id} className={`svg-node ${node.kind} ${node.id === selected.id ? "selected" : ""}`} transform={`translate(${point.x},${point.y})`} role="button" tabIndex={0} onClick={() => onSelectNode(node)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onSelectNode(node); }}><rect x="-68" y="-20" width="136" height="40" rx="6" /><text textAnchor="middle" dominantBaseline="middle">{label}</text></g>; })}
   </svg><span className="kg-canvas-caption">仅展示选中节点的一跳关系，避免完整图谱挤出画布</span></div>;
 }
 
-function GraphNodeInspector({ node }: { node: GraphNode }) { return <div className="graph-node-inspector"><div><strong>{node.label}</strong><span>{node.kind}</span></div><p>{node.description}</p></div>; }
+function nodeKindLabel(kind: GraphNode["kind"]): string { return ({ category: "长期类别节点", scene: "场景节点", instance: "对象实例节点", unknown_sample: "未知样本节点", unknown_cluster: "未知聚类节点", event: "事件实例节点" })[kind]; }
+
+function GraphNodeInspector({ node }: { node: GraphNode }) { const properties = Object.entries(node.properties ?? {}); return <div className="graph-node-inspector"><div><strong>{node.label}</strong><span>{nodeKindLabel(node.kind)}</span></div><p>{node.description}</p>{properties.length > 0 && <dl>{properties.map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{String(value ?? "尚未赋值")}</dd></div>)}</dl>}</div>; }
 
 function SimulationViewport({ instances, selectedInstanceId, onSelectInstance }: { instances: WasteInstance[]; selectedInstanceId: string; onSelectInstance: (id: string) => void }) {
   return <div className="sim-viewport"><div className="camera-frustum" /><div className="robot-arm"><span className="joint base" /><span className="arm upper" /><span className="joint elbow" /><span className="arm lower" /><span className="gripper" /></div><div className="lab-table">{instances.slice(0, 4).map((instance, index) => <Debris key={instance.instance_id} className={`debris item-${index} ${instance.candidate_class}`} id={instance.instance_id} selected={selectedInstanceId === instance.instance_id} onSelect={onSelectInstance} />)}</div><div className="viewport-hud left"><span>D435i frame</span><strong>camera_color_optical_frame</strong></div><div className="viewport-hud right"><span>Selected</span><strong>{selectedInstanceId}</strong></div><div className="timeline"><button title="回放" type="button"><Play size={14} /></button><div><span /></div><small>00:14 / 01:20</small></div></div>;

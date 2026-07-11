@@ -59,7 +59,7 @@ class LearningAttributeTests(unittest.TestCase):
         self.assertEqual(graph.instances["brick_01"].task_status, "pending")
         self.assertEqual(graph.instances["brick_01"].attempt_count, before + 1)
 
-    def test_planning_event_does_not_mark_physical_processing_started(self) -> None:
+    def test_planning_event_marks_selected_instance_as_processing_without_attempt(self) -> None:
         graph = KnowledgeGraph()
         seed_default_categories(graph)
         graph.apply_observation(Observation(frame_id="scene_001", source="camera", objects=[DetectedObject("d1", "brick", 0.95)]))
@@ -72,7 +72,7 @@ class LearningAttributeTests(unittest.TestCase):
             action_id="action_plan_001",
         )
 
-        self.assertEqual(graph.instances["brick_01"].task_status, "pending")
+        self.assertEqual(graph.instances["brick_01"].task_status, "processing")
         self.assertEqual(graph.instances["brick_01"].attempt_count, 0)
 
     def test_discard_detection_preserves_auditable_target_node(self) -> None:
@@ -83,8 +83,9 @@ class LearningAttributeTests(unittest.TestCase):
         graph.apply_human_review("brick_01", review_action="discard_detection", reason="false positive")
 
         instance = graph.instances["brick_01"]
-        self.assertEqual(instance.task_status, "completed")
-        self.assertEqual(instance.current_handling_policy, "robot_forbidden")
+        self.assertEqual(instance.task_status, "pending")
+        self.assertEqual(instance.last_seen_scene, "")
+        self.assertNotIn(("scene_001", "CONTAINS", "brick_01"), graph.edges)
         self.assertIn((graph.events[-1].event_id, "REVIEWS", "brick_01"), graph.edges)
 
 

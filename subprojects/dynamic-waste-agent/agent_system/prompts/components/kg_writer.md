@@ -28,7 +28,7 @@ execution
 - 不解释自然语言。
 - 不推断类别、风险、优先级或动作。
 - 不创建 schema 外节点、属性、关系或事件。
-- PlanningEvent 只记录单步动作类型、理由和 SELECTS/IN_SCENE 关系。
+- PlanningEvent 只记录单步动作类型、理由和 SELECTS/IN_SCENE 关系；有 SELECTS 时把对应实例设为 `task_status=processing`，但不增加 `attempt_count`。
 - ExecutionEvent 只在真实物理动作开始后写入。
 - 写入成功后只向 LangGraph 返回控制摘要和 KG 引用，不复制完整图谱。
 - 感知写入通过一次性的 `observation_ref` 解析 Observation；提交后释放引用，不把引用保存为 KG 属性。

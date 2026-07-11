@@ -24,7 +24,7 @@ def validate_action_plan(
         reasons.append("scene_not_fresh")
     if plan.get("action_type") == "robot_grasp" and str(plan.get("target_instance_id")) not in set(eligible_instance_ids):
         reasons.append("target_not_eligible")
-    if plan.get("action_type") not in {"robot_grasp", "request_human_review", "rescan", "complete", "no_action"}:
+    if plan.get("action_type") not in {"robot_grasp", "request_human_review", "rescan", "no_action"}:
         reasons.append("unsupported_action_type")
     if plan.get("replan_after_execution") is not True:
         reasons.append("replan_after_execution_must_be_true")

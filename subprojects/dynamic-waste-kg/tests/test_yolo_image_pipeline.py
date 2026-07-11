@@ -41,7 +41,8 @@ class YoloImagePipelineTests(unittest.TestCase):
         self.assertEqual(records[0]["yolo_class_name"], "brick")
         self.assertEqual(records[0]["yolo_confidence"], 0.93)
         self.assertEqual(records[0]["bbox_xyxy"], [10.0, 20.0, 110.0, 220.0])
-        self.assertEqual(records[0]["center_xyz"], [60.0, 120.0, 0.0])
+        self.assertNotIn("center_xyz", records[0])
+        self.assertEqual(records[0]["metadata"]["pixel_center_xy"], [60.0, 120.0])
         self.assertEqual(records[0]["mask_polygon"], [(10.0, 20.0), (110.0, 20.0), (110.0, 220.0), (10.0, 220.0)])
 
     def test_records_from_yolo_result_can_limit_to_highest_confidence_records(self) -> None:

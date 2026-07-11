@@ -20,7 +20,7 @@ from .core import (
     canonicalize_category_name,
     seed_default_categories,
 )
-from .graph import KnowledgeGraph, build_planning_context, graph_events_to_jsonl, graph_to_json_snapshot, graph_to_mermaid, graph_to_neo4j_cypher
+from .graph import KnowledgeGraph, build_planning_context, graph_events_to_jsonl, graph_to_json_snapshot, graph_to_mermaid, graph_to_neo4j_cypher, stabilize_event_ids
 from .interfaces import (
     ExecutionFeedback,
     PlannerRequest,
@@ -92,6 +92,7 @@ __all__ = [
     "graph_to_json_snapshot",
     "graph_to_mermaid",
     "graph_to_neo4j_cypher",
+    "stabilize_event_ids",
     "relation_hint_from_record",
     "seed_default_categories",
     "vision_detection_from_record",

@@ -35,11 +35,14 @@ export interface GraphNode {
   x: number;
   y: number;
   description: string;
+  layer?: "long_term" | "short_term" | "event_log";
+  properties?: Record<string, string | number | boolean | null>;
 }
 
 export interface GraphEdge {
   from: string;
   to: string;
+  relation?: string;
 }
 
 export const runStatus = {

@@ -57,7 +57,6 @@ def records_from_yolo_result(result: Any, *, max_detections: Optional[int] = Non
                 "temp_id": f"det_{output_index + 1:03d}",
                 "yolo_class_name": class_name,
                 "yolo_confidence": float(confidences[index]),
-                "center_xyz": [center_x, center_y, 0.0],
                 "bbox_xyxy": bbox,
                 "mask_polygon": mask_polygon,
                 "boundary_points": mask_polygon,

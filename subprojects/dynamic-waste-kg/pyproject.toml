@@ -8,6 +8,9 @@ version = "0.1.0"
 description = "Dynamic waste knowledge graph prototype for perception, planning, and execution"
 readme = "README.md"
 requires-python = ">=3.10"
+dependencies = [
+  "neo4j>=5,<7",
+]
 
 [tool.setuptools.packages.find]
 include = ["wastekg*"]

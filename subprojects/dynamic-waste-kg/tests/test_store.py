@@ -2,7 +2,7 @@
 
 import unittest
 
-from wastekg.core.models import CategorySpec, Observation
+from wastekg.core.models import CategorySpec, DetectedObject, Observation
 from wastekg.graph.store import KnowledgeGraph
 
 
@@ -26,6 +26,24 @@ class StoreTests(unittest.TestCase):
             )
         )
         self.assertEqual(summary["relation_count"], 0)
+
+    def test_same_class_without_depth_creates_distinct_instances(self) -> None:
+        graph = KnowledgeGraph()
+        graph.register_category(CategorySpec(name="glass"))
+
+        graph.apply_observation(
+            Observation(
+                frame_id="f3",
+                source="annotation",
+                objects=[
+                    DetectedObject("glass_a", "glass", 0.9),
+                    DetectedObject("glass_b", "glass", 0.9),
+                ],
+            )
+        )
+
+        self.assertEqual(set(graph.instances), {"glass_01", "glass_02"})
+        self.assertFalse(any(edge.relation == "NEAR" for edge in graph.edges.values()))
 
 
 if __name__ == "__main__":

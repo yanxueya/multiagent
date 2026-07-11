@@ -70,4 +70,4 @@ cd C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-agent
 .\.venv\Scripts\python.exe -m unittest discover -s tests
 ```
 
-当前已实现编排、checkpointer、interrupt、schema、内存 KG 适配器和跨子项目闭环测试；真实相机、Neo4j 在线事务 backend、ROS2/MoveIt 和机械臂闭环仍待接入。
+当前已实现编排、checkpointer、interrupt、schema、内存 KG 适配器、Neo4j 提交后镜像、UI 快照发布和跨子项目闭环测试；真实相机、持久化 LangGraph checkpointer、ROS2/MoveIt 和机械臂闭环仍待接入。

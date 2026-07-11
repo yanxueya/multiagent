@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
+from hashlib import sha256
 import re
 from typing import Any, Dict, List, Tuple
 
 from wastekg.core.models import GraphEvent
+from wastekg.core.models import RelationEdge
+from wastekg.core.schema import knowledge_schema_snapshot
 from wastekg.graph.store import KnowledgeGraph
 
 
@@ -35,7 +38,31 @@ def _neo4j_map(properties: Dict[str, Any]) -> str:
 
 
 def graph_to_json_snapshot(graph: KnowledgeGraph) -> Dict[str, Any]:
-    return graph.to_dict()
+    snapshot = graph.to_dict()
+    snapshot["schema"] = knowledge_schema_snapshot()
+    return snapshot
+
+
+def stabilize_event_ids(graph: KnowledgeGraph, *, namespace: str) -> None:
+    """为可重复离线导入生成稳定事件 ID，并同步更新事件关系端点。"""
+
+    replacements: Dict[str, str] = {}
+    for index, event in enumerate(graph.events):
+        digest = sha256(f"{namespace}:{index}:{event.event_type}:{event.event_source}".encode("utf-8")).hexdigest()[:16]
+        stable_id = f"evt_{digest}"
+        replacements[event.event_id] = stable_id
+        event.event_id = stable_id
+    if not replacements:
+        return
+    updated_edges: Dict[Tuple[str, str, str], RelationEdge] = {}
+    for edge in graph.edges.values():
+        updated = RelationEdge(
+            replacements.get(edge.source_id, edge.source_id),
+            edge.relation,
+            replacements.get(edge.target_id, edge.target_id),
+        )
+        updated_edges[updated.key()] = updated
+    graph.edges = updated_edges
 
 
 def graph_events_to_jsonl(graph: KnowledgeGraph) -> str:

@@ -1,6 +1,6 @@
 # Neo4j 存储与导出规范
 
-本文档说明当前知识图谱如何导出到 Neo4j。节点、字段和关系必须与 [knowledge_seed_zh.md](knowledge_seed_zh.md) 一致。
+本文档定义 Neo4j 的标签、主键和关系存储规范。在线启动、Agent 联动和 UI 更新步骤见 [三层知识图谱运行与联动指南](knowledge_graph_runtime_zh.md)。节点、字段和关系必须与 [knowledge_seed_zh.md](knowledge_seed_zh.md) 一致。
 
 ## 1. 节点标签
 
@@ -60,6 +60,14 @@ KnowledgeEvolutionEvent
 事件关系由 `wastekg/graph/store.py` 的关系白名单生成，例如 `DETECTED`、`REVIEWS`、`UPDATES`、`CONFIRMS`、`SELECTS`、`EXECUTES`、`EVOLVES`、`IN_SCENE` 和 `PROPOSED`。
 
 ## 4. 导出
+
+当前同时支持离线 Cypher 导出和在线事务镜像。在线入口是：
+
+```text
+wastekg/graph/neo4j_store.py::Neo4jGraphMirror
+```
+
+它只执行仓库内部从 `KnowledgeGraph` 生成的语句，不接受 Agent 自由 Cypher。
 
 ```powershell
 cd C:\Users\12279\Documents\multiagent\subprojects\dynamic-waste-kg

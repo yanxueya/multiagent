@@ -11,10 +11,13 @@
 优先阅读：
 
 - [知识图谱权威设计](knowledge_seed_zh.md)
+- [三层知识图谱运行与联动指南](knowledge_graph_runtime_zh.md)
+- [单张实验室图片接入 KG 与 Neo4j 示例](single_image_kg_example_zh.md)
+- [三张人工标注图片的 KG 构建与事件流示例](annotated_image_kg_walkthrough_zh.md)
 - [YOLO + 大模型接入指南](yolo_llm_integration_zh.md)
 - [通用大模型复核器配置说明](llm_reviewer_config_zh.md)
 - [RealSense RGB-D 接入知识图谱教程](realsense_rgbd_pipeline_zh.md)
-- [Neo4j 存储与可视化建议](neo4j_storage_zh.md)
+- [Neo4j 存储规范](neo4j_storage_zh.md)
 
 当前核心逻辑：
 

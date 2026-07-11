@@ -10,6 +10,7 @@ from wastekg.core.knowledge_base import seed_default_categories
 from wastekg.core.models import DetectedObject, Observation
 from wastekg.graph.query import build_planning_context
 from wastekg.graph.store import KnowledgeGraph
+from wastekg.graph.exporters import stabilize_event_ids
 
 
 def build_demo_graph() -> KnowledgeGraph:
@@ -44,6 +45,7 @@ def build_demo_graph() -> KnowledgeGraph:
         metadata={"rgb_ref": "demo/rgb_001.png", "depth_ref": "demo/depth_001.png"},
     )
     graph.apply_observation(observation)
+    stabilize_event_ids(graph, namespace="demo_frame_001")
     return graph
 
 

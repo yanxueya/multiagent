@@ -15,6 +15,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from wastekg.graph.cli import build_demo_graph
 from wastekg.graph.exporters import graph_to_json_snapshot
+from wastekg.graph.neo4j_store import Neo4jGraphMirror
 
 DEFAULT_OUTPUT = SUBPROJECTS_ROOT / "dynamic-waste-ui" / "public" / "data" / "kg-snapshot.json"
 
@@ -32,6 +33,11 @@ def _build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=DEFAULT_OUTPUT,
         help="Output JSON path consumed by dynamic-waste-ui/public/data/kg-snapshot.json.",
+    )
+    parser.add_argument(
+        "--neo4j",
+        action="store_true",
+        help="Read the current live Neo4j graph instead of the demo graph.",
     )
     return parser
 
@@ -61,6 +67,8 @@ def _normalize_for_ui(snapshot: Dict[str, Any]) -> Dict[str, Any]:
     snapshot.setdefault("unknown_clusters", {})
     snapshot.setdefault("edges", [])
     snapshot.setdefault("events", [])
+    snapshot.setdefault("schema", {})
+    snapshot.setdefault("provenance", {})
     return snapshot
 
 
@@ -76,6 +84,8 @@ def _compact_for_ui(snapshot: Dict[str, Any]) -> Dict[str, Any]:
         "unknown_clusters": dict(snapshot.get("unknown_clusters", {})),
         "edges": list(snapshot.get("edges", [])),
         "events": list(snapshot.get("events", [])),
+        "schema": dict(snapshot.get("schema", {})),
+        "provenance": dict(snapshot.get("provenance", {})),
     }
 
 def _write_snapshot(snapshot: Dict[str, Any], output: Path) -> None:
@@ -89,7 +99,16 @@ def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
 
-    snapshot = _load_snapshot(args.input) if args.input else _build_demo_ui_snapshot()
+    if args.input and args.neo4j:
+        parser.error("--input and --neo4j cannot be used together")
+    if args.neo4j:
+        mirror = Neo4jGraphMirror.from_env()
+        try:
+            snapshot = mirror.read_snapshot()
+        finally:
+            mirror.close()
+    else:
+        snapshot = _load_snapshot(args.input) if args.input else _build_demo_ui_snapshot()
     snapshot = _compact_for_ui(_normalize_for_ui(snapshot))
     _write_snapshot(snapshot, args.output)
 

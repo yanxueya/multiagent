@@ -35,6 +35,18 @@ metal, soft_plastic, hard_plastic, paperboard, glass
 
 长期知识不被单次观测直接修改；短期状态随观测和执行更新；事件只追加，不覆盖历史。
 
+### 2.1 三层是语义分层，不是额外节点
+
+Neo4j 中不创建虚构的 `Layer` 节点。节点所属层级由标签确定：
+
+```text
+WasteCategory                                      -> 长期知识层
+Scene / ObjectInstance / UnknownSample / UnknownCluster -> 短期记忆层
+Event 及其七种具体事件标签                          -> 事件日志层
+```
+
+三层通过真实业务关系连接，展示端应按标签计算分层布局，而不是依赖 Neo4j Browser 的力导向布局自动表现三层。
+
 ## 3. 长期知识层
 
 ### 3.1 WasteCategory 字段
@@ -49,11 +61,15 @@ default_handling_policy
 visual_prototype
 ```
 
+`category_name` 是 `WasteCategory` 自身的稳定业务主键，用于唯一约束、`MERGE` 和关系端点匹配，不能删除。它不等于把类别冗余写入 `ObjectInstance`：实例类别仍然只通过 `CANDIDATE_OF` 和 `CONFIRMED_AS` 关系表达。Neo4j 内部 `elementId()` 不是稳定业务标识，不能替代 `category_name`。
+
 枚举约束：
 
 - `risk_level`、`fragility`、`graspability_prior`：`low / medium / high`
 - `vlm_review_policy`：`threshold_based / always`
 - `default_handling_policy`：`auto_allowed / human_confirmation_required`
+
+`graspability_prior` 的完整允许域始终是 `low / medium / high`。当前 11 类种子只使用了 `low` 和 `medium`，没有类别被人工指定为 `high`；这不代表 schema 忽略或删除了 `high`。
 
 `visual_prototype` 只包含：
 
@@ -67,6 +83,16 @@ shape_form
 ```
 
 视觉原型用于 VLM 与 YOLO 假设的一致性校验，不是硬分类规则。
+
+### 3.1.1 visual_prototype 来源和证据等级
+
+当前 11 类 `visual_prototype` 的具体值逐项来自用户提供的《知识图谱.docx》。仓库中没有证明这些值由当前数据集统计、模型学习或实验标定得到的记录，因此其证据等级必须表述为：
+
+```text
+人工定义、待实验验证的长期种子先验
+```
+
+它们不是模拟测量结果，也不能作为论文中的已验证类别规律。后续如需修改，必须经过人工审核，并通过 `KnowledgeEvolutionEvent` 记录知识演化过程。
 
 ### 3.2 11 类长期种子
 
@@ -168,6 +194,8 @@ candidate_category_name
 
 未知样本不得自动进入训练集、自动新增长期类别或依据单次 VLM 判断更新类别体系。
 
+Neo4j 不保存 `null` 属性：例如 `human_label=null` 或 `candidate_category_name=null` 在业务节点上会暂时不可见，但字段仍属于 schema。UI 和审计必须从 schema 目录展示完整字段，不能根据当前节点的非空键反推字段定义。
+
 ## 5. 图关系
 
 关系只保存 `source_id / relation / target_id`，不附加置信度、时间或其他属性。当前关系包括：
@@ -181,7 +209,7 @@ ObjectInstance -[RECORDED_AS]-> UnknownSample
 UnknownSample -[MEMBER_OF]-> UnknownCluster
 ```
 
-事件可通过 `DETECTED`、`REVIEWS`、`UPDATES`、`CONFIRMS`、`SELECTS`、`EXECUTES`、`EVOLVES`、`IN_SCENE`、`PROPOSED` 等关系关联对象、类别和场景。关系类型由 `wastekg/graph/store.py` 的白名单约束。
+事件可通过 `DETECTED`、`REVIEWS`、`UPDATES`、`CONFIRMS`、`SELECTS`、`EXECUTES_ON`、`CREATES`、`IN_SCENE`、`PROPOSED`、`CHECKS_AGAINST` 等关系关联对象、类别和场景。关系类型由 `wastekg/graph/store.py` 的白名单约束。
 
 ## 6. 事件日志层
 
@@ -207,6 +235,35 @@ event_source
 | `KnowledgeEvolutionEvent` | `knowledge_updater` | `evolution_action, reason` |
 
 事件字段和来源由 `wastekg/core/models.py` 强校验，未定义字段不能写入。
+
+以上七项是固定的事件类型定义，不代表数据库中必须预先存在七个占位事件。只有真实流程发生后才创建对应 `Event` 实例；未发生的事件类型不得为了展示而伪造。UI 应同时展示“七类事件目录”和“当前实际事件计数”。
+
+### 6.1 七类事件状态迁移
+
+| 事件 | 触发条件与前置条件 | 关系 | 触发后的状态变化 |
+| --- | --- | --- | --- |
+| `DetectionEvent` | Scene 已建立；YOLO 或已审核标注产生 `conf >= proposal_threshold` 的 11 类候选 | `IN_SCENE`、`DETECTED`、`PROPOSED` | 创建/更新实例和 `CANDIDATE_OF`；新实例设 `vlm_consistency=not_checked`、`task_status=pending`、`attempt_count=0` |
+| `VLMReviewEvent` | 置信度或类别策略要求 VLM 复核；实例、crop 和候选类别存在 | `REVIEWS`、`CHECKS_AGAINST` | `support`：accepted 并建立 `CONFIRMED_AS`；`conflict`：unknown、robot_forbidden，并创建 `UnknownSample` |
+| `DepthUpdateEvent` | RealSense 为当前实例提供有效三维证据 | `IN_SCENE`、`UPDATES` | 更新 `center_xyz_camera`、`depth_valid_ratio`、`observed_extent_3d`、`occlusion_state`；重新计算当前 Scene 的 `NEAR` |
+| `HumanReviewEvent` | `human_review_interrupt` 收到明确人工决定 | `REVIEWS`；确认已有类时增加 `CONFIRMS` | 按 `confirm_existing / mark_unknown / approve_robot / forbid_robot / discard_detection` 更新类别确认或处理权限 |
+| `PlanningEvent` | Supervisor 基于最新 Scene 请求一个下一步动作；硬资格检查已完成 | `IN_SCENE`、有目标时 `SELECTS` | 只记录一个 `planned_action`；被选实例进入 `task_status=processing`，不增加 `attempt_count` |
+| `ExecutionEvent` | 唯一 `action_id` 通过门控和 MoveIt，且真实物理动作已经开始 | `IN_SCENE`、`EXECUTES_ON` | `attempt_count += 1`；成功为 completed，失败为 failed；随后强制重新采集并创建新 Scene |
+| `KnowledgeEvolutionEvent` | unknown 经过人工确认、样本审核、必要训练和独立验证 | `UPDATES`；正式晋升时 `CREATES` | 更新 Unknown 记忆；只有 `promote_new_category` 可以创建长期类别 |
+
+`discard_detection` 的含义是人工确认当前候选为误检。实现上把该实例移出当前 Scene 和规划候选，同时保留事件到实例的审计证据；它不是新增 `rejected` 属性，也不能用 `completed` 冒充抓取成功。
+
+### 6.2 ID 规则
+
+ID 只负责稳定引用，不承载类别或规划语义。原始文件名和路径保存在 `rgb_ref`、`crop_ref`、`mask_ref` 等证据字段中。
+
+```text
+Scene          scn_<13 位令牌>
+ObjectInstance ins_<场景令牌>_<帧内序号>
+UnknownSample  unk_<场景令牌>_<帧内序号>
+Event          evt_<稳定令牌>
+```
+
+持续导入不得使用每次重启都会重新从 1 开始的 `brick_01` 作为全局主键。界面可以根据类别关系显示“砖块 01”等短标签，但该标签不能替代数据库业务 ID。
 
 ## 7. YOLO、VLM 与状态分流
 

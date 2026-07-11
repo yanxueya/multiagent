@@ -28,6 +28,7 @@ subprojects/dynamic-waste-kg/*.pt
 subprojects/dynamic-waste-kg/wastekg/local_llm_config.py
 .env
 *.env
+.env.neo4j
 subprojects/dynamic-waste-agent/.venv/
 
 *.egg-info/
@@ -36,4 +37,6 @@ subprojects/dynamic-waste-agent/.venv/
 node_modules/
 subprojects/dynamic-waste-ui/node_modules/
 subprojects/dynamic-waste-ui/.npm-cache/
+subprojects/dynamic-waste-ui/artifacts/
+subprojects/dynamic-waste-kg/paper_experiments/results/annotated_kg_examples/
 *.tsbuildinfo

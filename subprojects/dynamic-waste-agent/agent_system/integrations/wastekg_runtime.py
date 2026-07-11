@@ -1,8 +1,10 @@
-"""把 LangGraph 工具契约映射到内存 KnowledgeGraph，不新增 KG 属性。"""
+"""把 LangGraph 工具契约映射到 KG，并在提交后刷新 Neo4j/UI 镜像。"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
+from pathlib import Path
 from typing import Any
 
 
@@ -12,6 +14,8 @@ class WasteKgRuntimeAdapter:
 
     graph: Any
     transient_objects: dict[str, Any]
+    neo4j_mirror: Any | None = None
+    ui_snapshot_path: str | Path | None = None
 
     def candidate_loader(self, scene_id: str, instance_ids: list[str], goal: dict[str, Any]) -> list[dict[str, Any]]:
         context = self._planning_context(goal, scene_id=scene_id)
@@ -71,14 +75,14 @@ class WasteKgRuntimeAdapter:
         observation = self.transient_objects.pop(observation_ref)
         applied = self.graph.apply_observation(observation)
         context = self._planning_context({}, scene_id=str(applied["scene_id"]))
-        return {
+        return self._publish_after_commit({
             "status": "committed",
             "kg_summary_ref": f"kg://scene/{applied['scene_id']}",
             "eligible_instance_ids": list(context["eligible_instance_ids"]),
             "review_instance_ids": [item["instance_id"] for item in context["review_required"]],
             "created_instance_ids": list(applied["created_instances"]),
             "updated_instance_ids": list(applied["updated_instances"]),
-        }
+        })
 
     def _write_planning(self, payload: dict[str, Any]) -> dict[str, Any]:
         plan = dict(payload["action_plan"])
@@ -89,7 +93,7 @@ class WasteKgRuntimeAdapter:
             reason=str(payload.get("reason", "")),
             action_id=str(plan.get("action_id", "")),
         )
-        return {"status": "committed", "event_id": event.event_id}
+        return self._publish_after_commit({"status": "committed", "event_id": event.event_id})
 
     def _write_human_review(self, payload: dict[str, Any]) -> dict[str, Any]:
         for item in payload.get("review_results", []):
@@ -100,11 +104,11 @@ class WasteKgRuntimeAdapter:
                 confirmed_category=item.get("confirmed_category"),
             )
         context = self._planning_context({}, scene_id=str(payload.get("scene_id", "")))
-        return {
+        return self._publish_after_commit({
             "status": "committed",
             "remaining_review_instance_ids": [item["instance_id"] for item in context["review_required"]],
             "eligible_instance_ids": list(context["eligible_instance_ids"]),
-        }
+        })
 
     def _write_execution(self, payload: dict[str, Any]) -> dict[str, Any]:
         result = dict(payload["execution_result"])
@@ -116,7 +120,28 @@ class WasteKgRuntimeAdapter:
             execution_result=str(result["execution_status"]),
             failure_reason=str(result.get("failure_reason", "")),
         )
-        return {"status": "committed", "event_id": event.event_id}
+        return self._publish_after_commit({"status": "committed", "event_id": event.event_id})
+
+    def _publish_after_commit(self, result: dict[str, Any]) -> dict[str, Any]:
+        """内存提交成功后刷新外部镜像；失败状态显式返回而不伪装成功。"""
+
+        published = dict(result)
+        if self.neo4j_mirror is not None:
+            try:
+                counts = self.neo4j_mirror.sync_graph(self.graph)
+                published["neo4j_sync"] = {"status": "synced", "counts": dict(counts)}
+            except Exception as exc:  # 外部存储故障不能抹去已经提交的内存事实。
+                published["neo4j_sync"] = {"status": "failed", "error_type": type(exc).__name__}
+        if self.ui_snapshot_path is not None:
+            from wastekg.graph.exporters import graph_to_json_snapshot
+
+            output = Path(self.ui_snapshot_path)
+            output.parent.mkdir(parents=True, exist_ok=True)
+            temporary = output.with_suffix(output.suffix + ".tmp")
+            temporary.write_text(json.dumps(graph_to_json_snapshot(self.graph), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            temporary.replace(output)
+            published["ui_snapshot"] = {"status": "published", "path": str(output)}
+        return published
 
     def _planning_context(self, goal: dict[str, Any], *, scene_id: str = "") -> dict[str, Any]:
         from wastekg.graph.query import build_planning_context

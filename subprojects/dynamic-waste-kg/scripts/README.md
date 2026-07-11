@@ -9,6 +9,9 @@
 - `llm/`：大模型配置检查和轻量验证入口。
 - `rgbd/`：RealSense/RGB-D 单帧采集、分组数据采集和图谱接入入口。
 - `graph/`：知识图谱导出、Neo4j 导入和图谱预测入口。
+  - `sync_neo4j.py`：在线创建约束并同步 11 类、备用实例、事件和关系。
+  - `predict_image_to_graph.py`：单图 YOLO 推理，可选同步 Neo4j 和 UI 快照。
+  - `build_annotated_kg_examples.py`：读取三张人工 YOLO 分割标注，生成前后场景和低置信人工复核 KG 夹具；不运行训练或推理。
 - `paper/`：论文实验所需的样本导出入口。
 - `tools/`：临时但可复用的小工具。
 

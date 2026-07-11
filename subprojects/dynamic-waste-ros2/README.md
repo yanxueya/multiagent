@@ -1,5 +1,7 @@
 # dynamic-waste-ros2
 
+Ubuntu 迁移、RealSense 数据采集、标定、Piper 安全 bringup 和后续闭环接入，请先阅读 [Ubuntu 22.04 相机采集与 ROS2/机械臂接入指南](docs/ubuntu_migration_and_hardware_integration_zh.md)。
+
 这是后续 ROS2 接入的占位子项目，目标是在 Ubuntu 22.04/ROS2 环境中承接机器人消息、桥接、执行器、感知订阅和 bringup。
 
 当前状态：结构占位，尚未创建可编译 ROS2 package。

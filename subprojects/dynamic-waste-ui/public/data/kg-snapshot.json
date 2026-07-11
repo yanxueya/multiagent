@@ -361,430 +361,1403 @@
     }
   },
   "scenes": {
-    "demo_frame_001": {
-      "scene_id": "demo_frame_001",
-      "captured_at": "2026-07-11T01:18:38.261915+00:00",
-      "rgb_ref": "demo/rgb_001.png",
-      "depth_ref": "demo/depth_001.png"
+    "scn_action_before": {
+      "scene_id": "scn_action_before",
+      "captured_at": "2026-07-11T10:34:10.598802+00:00",
+      "rgb_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.jpg",
+      "depth_ref": ""
+    },
+    "scn_action_after": {
+      "scene_id": "scn_action_after",
+      "captured_at": "2026-07-11T10:34:10.599796+00:00",
+      "rgb_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.jpg",
+      "depth_ref": ""
+    },
+    "scn_low_conf_review": {
+      "scene_id": "scn_low_conf_review",
+      "captured_at": "2026-07-11T10:34:10.600563+00:00",
+      "rgb_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\259650ef49ebae050d60dd52614b5c02_jpg.rf.uPUYawnIXxEblhooyu00.jpg",
+      "depth_ref": ""
     }
   },
   "instances": {
-    "brick_01": {
-      "instance_id": "brick_01",
-      "yolo_confidence": 0.96,
+    "ins_labexample_01": {
+      "instance_id": "ins_labexample_01",
+      "yolo_confidence": 0.9,
       "recognition_status": "accepted",
-      "bbox_2d": null,
-      "mask_ref": "",
-      "crop_ref": "",
+      "bbox_2d": [
+        362.0,
+        113.0,
+        403.0,
+        163.0
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.txt#1",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.jpg",
       "center_xyz_camera": [
-        0.1,
-        0.1,
+        0.0,
+        0.0,
         0.0
       ],
-      "depth_valid_ratio": 0.82,
+      "depth_valid_ratio": 0.0,
       "observed_extent_3d": [
-        0.18,
-        0.1,
-        0.06
+        0.0,
+        0.0,
+        0.0
       ],
-      "occlusion_state": "none",
+      "occlusion_state": "unknown",
+      "vlm_consistency": "not_checked",
+      "current_handling_policy": "human_confirmation_required",
+      "task_status": "pending",
+      "attempt_count": 0
+    },
+    "ins_labexample_02": {
+      "instance_id": "ins_labexample_02",
+      "yolo_confidence": 0.9,
+      "recognition_status": "accepted",
+      "bbox_2d": [
+        81.0,
+        129.0,
+        301.0,
+        260.0
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.txt#2",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.jpg",
+      "center_xyz_camera": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "depth_valid_ratio": 0.0,
+      "observed_extent_3d": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "occlusion_state": "unknown",
       "vlm_consistency": "not_checked",
       "current_handling_policy": "auto_allowed",
       "task_status": "pending",
       "attempt_count": 0
     },
-    "glass_01": {
-      "instance_id": "glass_01",
-      "yolo_confidence": 0.91,
+    "ins_labexample_03": {
+      "instance_id": "ins_labexample_03",
+      "yolo_confidence": 0.9,
       "recognition_status": "accepted",
-      "bbox_2d": null,
-      "mask_ref": "",
-      "crop_ref": "",
+      "bbox_2d": [
+        134.0,
+        152.0,
+        201.0,
+        214.0
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.txt#4",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.jpg",
       "center_xyz_camera": [
-        0.11,
-        0.11,
-        0.08
+        0.0,
+        0.0,
+        0.0
       ],
-      "depth_valid_ratio": 0.68,
+      "depth_valid_ratio": 0.0,
       "observed_extent_3d": [
-        0.12,
-        0.08,
-        0.02
-      ],
-      "occlusion_state": "partial",
-      "vlm_consistency": "not_checked",
-      "current_handling_policy": "human_confirmation_required",
-      "task_status": "pending",
-      "attempt_count": 0
-    },
-    "metal_01": {
-      "instance_id": "metal_01",
-      "yolo_confidence": 0.88,
-      "recognition_status": "accepted",
-      "bbox_2d": null,
-      "mask_ref": "",
-      "crop_ref": "",
-      "center_xyz_camera": [
-        0.3,
-        0.2,
-        0.02
-      ],
-      "depth_valid_ratio": 0.73,
-      "observed_extent_3d": [
-        0.2,
-        0.05,
-        0.04
-      ],
-      "occlusion_state": "none",
-      "vlm_consistency": "not_checked",
-      "current_handling_policy": "human_confirmation_required",
-      "task_status": "pending",
-      "attempt_count": 0
-    },
-    "unknown_01": {
-      "instance_id": "unknown_01",
-      "yolo_confidence": 0.11,
-      "recognition_status": "unknown",
-      "bbox_2d": null,
-      "mask_ref": "",
-      "crop_ref": "",
-      "center_xyz_camera": [
-        0.23,
-        0.18,
-        0.02
-      ],
-      "depth_valid_ratio": 0.51,
-      "observed_extent_3d": [
-        0.09,
-        0.08,
-        0.05
+        0.0,
+        0.0,
+        0.0
       ],
       "occlusion_state": "unknown",
       "vlm_consistency": "not_checked",
-      "current_handling_policy": "robot_forbidden",
+      "current_handling_policy": "human_confirmation_required",
+      "task_status": "pending",
+      "attempt_count": 0
+    },
+    "ins_labexample_04": {
+      "instance_id": "ins_labexample_04",
+      "yolo_confidence": 0.9,
+      "recognition_status": "accepted",
+      "bbox_2d": [
+        222.0,
+        74.0,
+        377.0,
+        238.0
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.txt#1",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.jpg",
+      "center_xyz_camera": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "depth_valid_ratio": 0.0,
+      "observed_extent_3d": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "occlusion_state": "unknown",
+      "vlm_consistency": "not_checked",
+      "current_handling_policy": "human_confirmation_required",
+      "task_status": "pending",
+      "attempt_count": 0
+    },
+    "ins_labexample_05": {
+      "instance_id": "ins_labexample_05",
+      "yolo_confidence": 0.9,
+      "recognition_status": "accepted",
+      "bbox_2d": [
+        430.0,
+        88.0,
+        483.0,
+        124.00000000000001
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.txt#5",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.jpg",
+      "center_xyz_camera": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "depth_valid_ratio": 0.0,
+      "observed_extent_3d": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "occlusion_state": "unknown",
+      "vlm_consistency": "not_checked",
+      "current_handling_policy": "auto_allowed",
+      "task_status": "pending",
+      "attempt_count": 0
+    },
+    "ins_labexample_06": {
+      "instance_id": "ins_labexample_06",
+      "yolo_confidence": 0.9,
+      "recognition_status": "accepted",
+      "bbox_2d": [
+        311.0,
+        119.0,
+        468.0,
+        390.0
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.txt#6",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.jpg",
+      "center_xyz_camera": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "depth_valid_ratio": 0.0,
+      "observed_extent_3d": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "occlusion_state": "unknown",
+      "vlm_consistency": "not_checked",
+      "current_handling_policy": "auto_allowed",
+      "task_status": "completed",
+      "attempt_count": 1
+    },
+    "ins_labexample_07": {
+      "instance_id": "ins_labexample_07",
+      "yolo_confidence": 0.9,
+      "recognition_status": "accepted",
+      "bbox_2d": [
+        333.99999999999994,
+        121.00000000000001,
+        402.0,
+        239.99999999999997
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.txt#3",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.jpg",
+      "center_xyz_camera": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "depth_valid_ratio": 0.0,
+      "observed_extent_3d": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "occlusion_state": "unknown",
+      "vlm_consistency": "not_checked",
+      "current_handling_policy": "auto_allowed",
+      "task_status": "pending",
+      "attempt_count": 0
+    },
+    "ins_labexample_08": {
+      "instance_id": "ins_labexample_08",
+      "yolo_confidence": 0.9,
+      "recognition_status": "accepted",
+      "bbox_2d": [
+        226.0,
+        237.0,
+        344.0,
+        308.0
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.txt#5",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.jpg",
+      "center_xyz_camera": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "depth_valid_ratio": 0.0,
+      "observed_extent_3d": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "occlusion_state": "unknown",
+      "vlm_consistency": "not_checked",
+      "current_handling_policy": "auto_allowed",
+      "task_status": "pending",
+      "attempt_count": 0
+    },
+    "ins_labexample_09": {
+      "instance_id": "ins_labexample_09",
+      "yolo_confidence": 0.5,
+      "recognition_status": "accepted",
+      "bbox_2d": [
+        225.0,
+        42.0,
+        894.0,
+        614.0
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\259650ef49ebae050d60dd52614b5c02_jpg.rf.uPUYawnIXxEblhooyu00.txt#1",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\259650ef49ebae050d60dd52614b5c02_jpg.rf.uPUYawnIXxEblhooyu00.jpg",
+      "center_xyz_camera": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "depth_valid_ratio": 0.0,
+      "observed_extent_3d": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "occlusion_state": "unknown",
+      "vlm_consistency": "not_checked",
+      "current_handling_policy": "auto_allowed",
+      "task_status": "pending",
+      "attempt_count": 0
+    },
+    "ins_labexample_10": {
+      "instance_id": "ins_labexample_10",
+      "yolo_confidence": 0.9,
+      "recognition_status": "accepted",
+      "bbox_2d": [
+        178.0,
+        715.0,
+        477.0,
+        1017.0
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\259650ef49ebae050d60dd52614b5c02_jpg.rf.uPUYawnIXxEblhooyu00.txt#2",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\259650ef49ebae050d60dd52614b5c02_jpg.rf.uPUYawnIXxEblhooyu00.jpg",
+      "center_xyz_camera": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "depth_valid_ratio": 0.0,
+      "observed_extent_3d": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "occlusion_state": "unknown",
+      "vlm_consistency": "not_checked",
+      "current_handling_policy": "human_confirmation_required",
       "task_status": "pending",
       "attempt_count": 0
     }
   },
-  "unknown_samples": {
-    "unknown_sample_001": {
-      "sample_id": "unknown_sample_001",
-      "crop_ref": "",
-      "mask_ref": "",
-      "yolo_topk": {
-        "foam": 0.11,
-        "soft_plastic": 0.08
-      },
-      "vlm_attributes": {},
-      "review_status": "pending",
-      "human_label": null
-    }
-  },
+  "unknown_samples": {},
   "unknown_clusters": {},
   "edges": [
     {
-      "source_id": "demo_frame_001",
+      "source_id": "scn_action_before",
       "relation": "CONTAINS",
-      "target_id": "brick_01"
+      "target_id": "ins_labexample_01"
     },
     {
-      "source_id": "brick_01",
-      "relation": "CANDIDATE_OF",
-      "target_id": "brick"
-    },
-    {
-      "source_id": "evt_9da4d7e27176",
-      "relation": "IN_SCENE",
-      "target_id": "demo_frame_001"
-    },
-    {
-      "source_id": "evt_9da4d7e27176",
-      "relation": "DETECTED",
-      "target_id": "brick_01"
-    },
-    {
-      "source_id": "evt_9da4d7e27176",
-      "relation": "PROPOSED",
-      "target_id": "brick"
-    },
-    {
-      "source_id": "brick_01",
-      "relation": "CONFIRMED_AS",
-      "target_id": "brick"
-    },
-    {
-      "source_id": "evt_41a7350788ee",
-      "relation": "IN_SCENE",
-      "target_id": "demo_frame_001"
-    },
-    {
-      "source_id": "evt_41a7350788ee",
-      "relation": "UPDATES",
-      "target_id": "brick_01"
-    },
-    {
-      "source_id": "demo_frame_001",
-      "relation": "CONTAINS",
-      "target_id": "glass_01"
-    },
-    {
-      "source_id": "glass_01",
+      "source_id": "ins_labexample_01",
       "relation": "CANDIDATE_OF",
       "target_id": "glass"
     },
     {
-      "source_id": "evt_ffceac2a010d",
+      "source_id": "evt_8e3058998380c794",
       "relation": "IN_SCENE",
-      "target_id": "demo_frame_001"
+      "target_id": "scn_action_before"
     },
     {
-      "source_id": "evt_ffceac2a010d",
+      "source_id": "evt_8e3058998380c794",
       "relation": "DETECTED",
-      "target_id": "glass_01"
+      "target_id": "ins_labexample_01"
     },
     {
-      "source_id": "evt_ffceac2a010d",
+      "source_id": "evt_8e3058998380c794",
       "relation": "PROPOSED",
       "target_id": "glass"
     },
     {
-      "source_id": "glass_01",
+      "source_id": "ins_labexample_01",
       "relation": "CONFIRMED_AS",
       "target_id": "glass"
     },
     {
-      "source_id": "evt_139728459f41",
-      "relation": "IN_SCENE",
-      "target_id": "demo_frame_001"
-    },
-    {
-      "source_id": "evt_139728459f41",
-      "relation": "UPDATES",
-      "target_id": "glass_01"
-    },
-    {
-      "source_id": "demo_frame_001",
+      "source_id": "scn_action_before",
       "relation": "CONTAINS",
-      "target_id": "metal_01"
+      "target_id": "ins_labexample_02"
     },
     {
-      "source_id": "metal_01",
+      "source_id": "ins_labexample_02",
       "relation": "CANDIDATE_OF",
-      "target_id": "metal"
+      "target_id": "paperboard"
     },
     {
-      "source_id": "evt_e37615cad88e",
+      "source_id": "evt_1d1519a3a866ce7d",
       "relation": "IN_SCENE",
-      "target_id": "demo_frame_001"
+      "target_id": "scn_action_before"
     },
     {
-      "source_id": "evt_e37615cad88e",
+      "source_id": "evt_1d1519a3a866ce7d",
       "relation": "DETECTED",
-      "target_id": "metal_01"
+      "target_id": "ins_labexample_02"
     },
     {
-      "source_id": "evt_e37615cad88e",
+      "source_id": "evt_1d1519a3a866ce7d",
       "relation": "PROPOSED",
-      "target_id": "metal"
+      "target_id": "paperboard"
     },
     {
-      "source_id": "metal_01",
+      "source_id": "ins_labexample_02",
       "relation": "CONFIRMED_AS",
-      "target_id": "metal"
+      "target_id": "paperboard"
     },
     {
-      "source_id": "evt_d040346c9d3c",
-      "relation": "IN_SCENE",
-      "target_id": "demo_frame_001"
-    },
-    {
-      "source_id": "evt_d040346c9d3c",
-      "relation": "UPDATES",
-      "target_id": "metal_01"
-    },
-    {
-      "source_id": "demo_frame_001",
+      "source_id": "scn_action_before",
       "relation": "CONTAINS",
-      "target_id": "unknown_01"
+      "target_id": "ins_labexample_03"
     },
     {
-      "source_id": "unknown_01",
+      "source_id": "ins_labexample_03",
+      "relation": "CANDIDATE_OF",
+      "target_id": "glass"
+    },
+    {
+      "source_id": "evt_51379ed0042129b3",
+      "relation": "IN_SCENE",
+      "target_id": "scn_action_before"
+    },
+    {
+      "source_id": "evt_51379ed0042129b3",
+      "relation": "DETECTED",
+      "target_id": "ins_labexample_03"
+    },
+    {
+      "source_id": "evt_51379ed0042129b3",
+      "relation": "PROPOSED",
+      "target_id": "glass"
+    },
+    {
+      "source_id": "ins_labexample_03",
+      "relation": "CONFIRMED_AS",
+      "target_id": "glass"
+    },
+    {
+      "source_id": "scn_action_before",
+      "relation": "CONTAINS",
+      "target_id": "ins_labexample_04"
+    },
+    {
+      "source_id": "ins_labexample_04",
+      "relation": "CANDIDATE_OF",
+      "target_id": "soft_plastic"
+    },
+    {
+      "source_id": "evt_e51c81d227f3fef6",
+      "relation": "IN_SCENE",
+      "target_id": "scn_action_before"
+    },
+    {
+      "source_id": "evt_e51c81d227f3fef6",
+      "relation": "DETECTED",
+      "target_id": "ins_labexample_04"
+    },
+    {
+      "source_id": "evt_e51c81d227f3fef6",
+      "relation": "PROPOSED",
+      "target_id": "soft_plastic"
+    },
+    {
+      "source_id": "ins_labexample_04",
+      "relation": "CONFIRMED_AS",
+      "target_id": "soft_plastic"
+    },
+    {
+      "source_id": "scn_action_before",
+      "relation": "CONTAINS",
+      "target_id": "ins_labexample_05"
+    },
+    {
+      "source_id": "ins_labexample_05",
+      "relation": "CANDIDATE_OF",
+      "target_id": "paperboard"
+    },
+    {
+      "source_id": "evt_69317547d9f23253",
+      "relation": "IN_SCENE",
+      "target_id": "scn_action_before"
+    },
+    {
+      "source_id": "evt_69317547d9f23253",
+      "relation": "DETECTED",
+      "target_id": "ins_labexample_05"
+    },
+    {
+      "source_id": "evt_69317547d9f23253",
+      "relation": "PROPOSED",
+      "target_id": "paperboard"
+    },
+    {
+      "source_id": "ins_labexample_05",
+      "relation": "CONFIRMED_AS",
+      "target_id": "paperboard"
+    },
+    {
+      "source_id": "scn_action_before",
+      "relation": "CONTAINS",
+      "target_id": "ins_labexample_06"
+    },
+    {
+      "source_id": "ins_labexample_06",
+      "relation": "CANDIDATE_OF",
+      "target_id": "hard_plastic"
+    },
+    {
+      "source_id": "evt_0f56454f73a9c39e",
+      "relation": "IN_SCENE",
+      "target_id": "scn_action_before"
+    },
+    {
+      "source_id": "evt_0f56454f73a9c39e",
+      "relation": "DETECTED",
+      "target_id": "ins_labexample_06"
+    },
+    {
+      "source_id": "evt_0f56454f73a9c39e",
+      "relation": "PROPOSED",
+      "target_id": "hard_plastic"
+    },
+    {
+      "source_id": "ins_labexample_06",
+      "relation": "CONFIRMED_AS",
+      "target_id": "hard_plastic"
+    },
+    {
+      "source_id": "scn_action_before",
+      "relation": "CONTAINS",
+      "target_id": "ins_labexample_07"
+    },
+    {
+      "source_id": "ins_labexample_07",
+      "relation": "CANDIDATE_OF",
+      "target_id": "paperboard"
+    },
+    {
+      "source_id": "evt_ac46007cd02a4816",
+      "relation": "IN_SCENE",
+      "target_id": "scn_action_before"
+    },
+    {
+      "source_id": "evt_ac46007cd02a4816",
+      "relation": "DETECTED",
+      "target_id": "ins_labexample_07"
+    },
+    {
+      "source_id": "evt_ac46007cd02a4816",
+      "relation": "PROPOSED",
+      "target_id": "paperboard"
+    },
+    {
+      "source_id": "ins_labexample_07",
+      "relation": "CONFIRMED_AS",
+      "target_id": "paperboard"
+    },
+    {
+      "source_id": "scn_action_before",
+      "relation": "CONTAINS",
+      "target_id": "ins_labexample_08"
+    },
+    {
+      "source_id": "ins_labexample_08",
+      "relation": "CANDIDATE_OF",
+      "target_id": "wood"
+    },
+    {
+      "source_id": "evt_85a847a83178a240",
+      "relation": "IN_SCENE",
+      "target_id": "scn_action_before"
+    },
+    {
+      "source_id": "evt_85a847a83178a240",
+      "relation": "DETECTED",
+      "target_id": "ins_labexample_08"
+    },
+    {
+      "source_id": "evt_85a847a83178a240",
+      "relation": "PROPOSED",
+      "target_id": "wood"
+    },
+    {
+      "source_id": "ins_labexample_08",
+      "relation": "CONFIRMED_AS",
+      "target_id": "wood"
+    },
+    {
+      "source_id": "evt_832da6d26b954298",
+      "relation": "IN_SCENE",
+      "target_id": "scn_action_before"
+    },
+    {
+      "source_id": "evt_832da6d26b954298",
+      "relation": "SELECTS",
+      "target_id": "ins_labexample_06"
+    },
+    {
+      "source_id": "evt_37e43517e92dee48",
+      "relation": "EXECUTES_ON",
+      "target_id": "ins_labexample_06"
+    },
+    {
+      "source_id": "evt_37e43517e92dee48",
+      "relation": "IN_SCENE",
+      "target_id": "scn_action_before"
+    },
+    {
+      "source_id": "scn_action_after",
+      "relation": "CONTAINS",
+      "target_id": "ins_labexample_04"
+    },
+    {
+      "source_id": "evt_08d9d72e93f3b6ad",
+      "relation": "IN_SCENE",
+      "target_id": "scn_action_after"
+    },
+    {
+      "source_id": "evt_08d9d72e93f3b6ad",
+      "relation": "DETECTED",
+      "target_id": "ins_labexample_04"
+    },
+    {
+      "source_id": "evt_08d9d72e93f3b6ad",
+      "relation": "PROPOSED",
+      "target_id": "soft_plastic"
+    },
+    {
+      "source_id": "scn_action_after",
+      "relation": "CONTAINS",
+      "target_id": "ins_labexample_02"
+    },
+    {
+      "source_id": "evt_45052c14e1f1dbc7",
+      "relation": "IN_SCENE",
+      "target_id": "scn_action_after"
+    },
+    {
+      "source_id": "evt_45052c14e1f1dbc7",
+      "relation": "DETECTED",
+      "target_id": "ins_labexample_02"
+    },
+    {
+      "source_id": "evt_45052c14e1f1dbc7",
+      "relation": "PROPOSED",
+      "target_id": "paperboard"
+    },
+    {
+      "source_id": "scn_action_after",
+      "relation": "CONTAINS",
+      "target_id": "ins_labexample_07"
+    },
+    {
+      "source_id": "evt_df023af82b49d8f1",
+      "relation": "IN_SCENE",
+      "target_id": "scn_action_after"
+    },
+    {
+      "source_id": "evt_df023af82b49d8f1",
+      "relation": "DETECTED",
+      "target_id": "ins_labexample_07"
+    },
+    {
+      "source_id": "evt_df023af82b49d8f1",
+      "relation": "PROPOSED",
+      "target_id": "paperboard"
+    },
+    {
+      "source_id": "scn_action_after",
+      "relation": "CONTAINS",
+      "target_id": "ins_labexample_03"
+    },
+    {
+      "source_id": "evt_043d0ad22b5b1dd2",
+      "relation": "IN_SCENE",
+      "target_id": "scn_action_after"
+    },
+    {
+      "source_id": "evt_043d0ad22b5b1dd2",
+      "relation": "DETECTED",
+      "target_id": "ins_labexample_03"
+    },
+    {
+      "source_id": "evt_043d0ad22b5b1dd2",
+      "relation": "PROPOSED",
+      "target_id": "glass"
+    },
+    {
+      "source_id": "scn_action_after",
+      "relation": "CONTAINS",
+      "target_id": "ins_labexample_08"
+    },
+    {
+      "source_id": "evt_ba53157398d9fd48",
+      "relation": "IN_SCENE",
+      "target_id": "scn_action_after"
+    },
+    {
+      "source_id": "evt_ba53157398d9fd48",
+      "relation": "DETECTED",
+      "target_id": "ins_labexample_08"
+    },
+    {
+      "source_id": "evt_ba53157398d9fd48",
+      "relation": "PROPOSED",
+      "target_id": "wood"
+    },
+    {
+      "source_id": "scn_low_conf_review",
+      "relation": "CONTAINS",
+      "target_id": "ins_labexample_09"
+    },
+    {
+      "source_id": "ins_labexample_09",
+      "relation": "CANDIDATE_OF",
+      "target_id": "paperboard"
+    },
+    {
+      "source_id": "evt_9937ff8a7306fa13",
+      "relation": "IN_SCENE",
+      "target_id": "scn_low_conf_review"
+    },
+    {
+      "source_id": "evt_9937ff8a7306fa13",
+      "relation": "DETECTED",
+      "target_id": "ins_labexample_09"
+    },
+    {
+      "source_id": "evt_9937ff8a7306fa13",
+      "relation": "PROPOSED",
+      "target_id": "paperboard"
+    },
+    {
+      "source_id": "scn_low_conf_review",
+      "relation": "CONTAINS",
+      "target_id": "ins_labexample_10"
+    },
+    {
+      "source_id": "ins_labexample_10",
       "relation": "CANDIDATE_OF",
       "target_id": "foam"
     },
     {
-      "source_id": "evt_3703712df59a",
+      "source_id": "evt_c167006d35ba568e",
       "relation": "IN_SCENE",
-      "target_id": "demo_frame_001"
+      "target_id": "scn_low_conf_review"
     },
     {
-      "source_id": "evt_3703712df59a",
+      "source_id": "evt_c167006d35ba568e",
       "relation": "DETECTED",
-      "target_id": "unknown_01"
+      "target_id": "ins_labexample_10"
     },
     {
-      "source_id": "evt_3703712df59a",
+      "source_id": "evt_c167006d35ba568e",
       "relation": "PROPOSED",
       "target_id": "foam"
     },
     {
-      "source_id": "unknown_01",
-      "relation": "RECORDED_AS",
-      "target_id": "unknown_sample_001"
+      "source_id": "ins_labexample_10",
+      "relation": "CONFIRMED_AS",
+      "target_id": "foam"
     },
     {
-      "source_id": "evt_326c595e58fc",
-      "relation": "IN_SCENE",
-      "target_id": "demo_frame_001"
+      "source_id": "ins_labexample_09",
+      "relation": "CONFIRMED_AS",
+      "target_id": "paperboard"
     },
     {
-      "source_id": "evt_326c595e58fc",
-      "relation": "UPDATES",
-      "target_id": "unknown_01"
+      "source_id": "evt_b8b6e129a2d24420",
+      "relation": "REVIEWS",
+      "target_id": "ins_labexample_09"
     },
     {
-      "source_id": "brick_01",
-      "relation": "NEAR",
-      "target_id": "glass_01"
-    },
-    {
-      "source_id": "brick_01",
-      "relation": "NEAR",
-      "target_id": "metal_01"
-    },
-    {
-      "source_id": "brick_01",
-      "relation": "NEAR",
-      "target_id": "unknown_01"
-    },
-    {
-      "source_id": "glass_01",
-      "relation": "NEAR",
-      "target_id": "metal_01"
-    },
-    {
-      "source_id": "glass_01",
-      "relation": "NEAR",
-      "target_id": "unknown_01"
-    },
-    {
-      "source_id": "metal_01",
-      "relation": "NEAR",
-      "target_id": "unknown_01"
+      "source_id": "evt_b8b6e129a2d24420",
+      "relation": "CONFIRMS",
+      "target_id": "paperboard"
     }
   ],
   "events": [
     {
-      "event_id": "evt_9da4d7e27176",
+      "event_id": "evt_8e3058998380c794",
       "event_type": "DetectionEvent",
-      "event_time": "2026-07-11T01:18:38.261985+00:00",
+      "event_time": "2026-07-11T10:34:10.598865+00:00",
       "event_source": "yolo_detector",
-      "yolo_confidence": 0.96,
-      "bbox_2d": null,
-      "mask_ref": "",
-      "crop_ref": ""
+      "yolo_confidence": 0.9,
+      "bbox_2d": [
+        362.0,
+        113.0,
+        403.0,
+        163.0
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.txt#1",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.jpg"
     },
     {
-      "event_id": "evt_41a7350788ee",
-      "event_type": "DepthUpdateEvent",
-      "event_time": "2026-07-11T01:18:38.262023+00:00",
-      "event_source": "depth_processor",
-      "center_xyz_camera": [
-        0.1,
-        0.1,
-        0.0
-      ],
-      "depth_valid_ratio": 0.82,
-      "observed_extent_3d": [
-        0.18,
-        0.1,
-        0.06
-      ],
-      "occlusion_state": "none"
-    },
-    {
-      "event_id": "evt_ffceac2a010d",
+      "event_id": "evt_1d1519a3a866ce7d",
       "event_type": "DetectionEvent",
-      "event_time": "2026-07-11T01:18:38.262069+00:00",
+      "event_time": "2026-07-11T10:34:10.598931+00:00",
       "event_source": "yolo_detector",
-      "yolo_confidence": 0.91,
-      "bbox_2d": null,
-      "mask_ref": "",
-      "crop_ref": ""
+      "yolo_confidence": 0.9,
+      "bbox_2d": [
+        165.0,
+        97.0,
+        375.0,
+        230.0
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.txt#2",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.jpg"
     },
     {
-      "event_id": "evt_139728459f41",
-      "event_type": "DepthUpdateEvent",
-      "event_time": "2026-07-11T01:18:38.262085+00:00",
-      "event_source": "depth_processor",
-      "center_xyz_camera": [
-        0.11,
-        0.11,
-        0.08
-      ],
-      "depth_valid_ratio": 0.68,
-      "observed_extent_3d": [
-        0.12,
-        0.08,
-        0.02
-      ],
-      "occlusion_state": "partial"
-    },
-    {
-      "event_id": "evt_e37615cad88e",
+      "event_id": "evt_51379ed0042129b3",
       "event_type": "DetectionEvent",
-      "event_time": "2026-07-11T01:18:38.262112+00:00",
+      "event_time": "2026-07-11T10:34:10.598969+00:00",
       "event_source": "yolo_detector",
-      "yolo_confidence": 0.88,
-      "bbox_2d": null,
-      "mask_ref": "",
-      "crop_ref": ""
+      "yolo_confidence": 0.9,
+      "bbox_2d": [
+        218.0,
+        117.0,
+        287.0,
+        184.0
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.txt#3",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.jpg"
     },
     {
-      "event_id": "evt_d040346c9d3c",
-      "event_type": "DepthUpdateEvent",
-      "event_time": "2026-07-11T01:18:38.262124+00:00",
-      "event_source": "depth_processor",
-      "center_xyz_camera": [
-        0.3,
-        0.2,
-        0.02
-      ],
-      "depth_valid_ratio": 0.73,
-      "observed_extent_3d": [
-        0.2,
-        0.05,
-        0.04
-      ],
-      "occlusion_state": "none"
-    },
-    {
-      "event_id": "evt_3703712df59a",
+      "event_id": "evt_e51c81d227f3fef6",
       "event_type": "DetectionEvent",
-      "event_time": "2026-07-11T01:18:38.262158+00:00",
+      "event_time": "2026-07-11T10:34:10.598995+00:00",
       "event_source": "yolo_detector",
-      "yolo_confidence": 0.11,
-      "bbox_2d": null,
-      "mask_ref": "",
-      "crop_ref": ""
+      "yolo_confidence": 0.9,
+      "bbox_2d": [
+        307.0,
+        35.0,
+        443.0,
+        186.0
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.txt#4",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.jpg"
     },
     {
-      "event_id": "evt_326c595e58fc",
-      "event_type": "DepthUpdateEvent",
-      "event_time": "2026-07-11T01:18:38.262179+00:00",
-      "event_source": "depth_processor",
-      "center_xyz_camera": [
-        0.23,
-        0.18,
-        0.02
+      "event_id": "evt_69317547d9f23253",
+      "event_type": "DetectionEvent",
+      "event_time": "2026-07-11T10:34:10.599016+00:00",
+      "event_source": "yolo_detector",
+      "yolo_confidence": 0.9,
+      "bbox_2d": [
+        430.0,
+        88.0,
+        483.0,
+        124.00000000000001
       ],
-      "depth_valid_ratio": 0.51,
-      "observed_extent_3d": [
-        0.09,
-        0.08,
-        0.05
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.txt#5",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.jpg"
+    },
+    {
+      "event_id": "evt_0f56454f73a9c39e",
+      "event_type": "DetectionEvent",
+      "event_time": "2026-07-11T10:34:10.599037+00:00",
+      "event_source": "yolo_detector",
+      "yolo_confidence": 0.9,
+      "bbox_2d": [
+        311.0,
+        119.0,
+        468.0,
+        390.0
       ],
-      "occlusion_state": "unknown"
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.txt#6",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.jpg"
+    },
+    {
+      "event_id": "evt_ac46007cd02a4816",
+      "event_type": "DetectionEvent",
+      "event_time": "2026-07-11T10:34:10.599055+00:00",
+      "event_source": "yolo_detector",
+      "yolo_confidence": 0.9,
+      "bbox_2d": [
+        461.0,
+        118.0,
+        499.0,
+        207.0
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.txt#7",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.jpg"
+    },
+    {
+      "event_id": "evt_85a847a83178a240",
+      "event_type": "DetectionEvent",
+      "event_time": "2026-07-11T10:34:10.599074+00:00",
+      "event_source": "yolo_detector",
+      "yolo_confidence": 0.9,
+      "bbox_2d": [
+        321.0,
+        218.0,
+        366.0,
+        276.0
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.txt#8",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_3-after_jpg.rf.7dUJB3BVukxkUS2Qgye8.jpg"
+    },
+    {
+      "event_id": "evt_832da6d26b954298",
+      "event_type": "PlanningEvent",
+      "event_time": "2026-07-11T10:34:10.599099+00:00",
+      "event_source": "task_planner",
+      "planned_action": "robot_grasp",
+      "reason": "Illustrative transition: hard_plastic selected from the author-confirmed before/after pair."
+    },
+    {
+      "event_id": "evt_37e43517e92dee48",
+      "event_type": "ExecutionEvent",
+      "event_time": "2026-07-11T10:34:10.599110+00:00",
+      "event_source": "robot_controller",
+      "action_id": "demo_robot_hard_plastic_01",
+      "physical_attempt_started": true,
+      "execution_result": "success",
+      "failure_reason": ""
+    },
+    {
+      "event_id": "evt_08d9d72e93f3b6ad",
+      "event_type": "DetectionEvent",
+      "event_time": "2026-07-11T10:34:10.599862+00:00",
+      "event_source": "yolo_detector",
+      "yolo_confidence": 0.9,
+      "bbox_2d": [
+        222.0,
+        74.0,
+        377.0,
+        238.0
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.txt#1",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.jpg"
+    },
+    {
+      "event_id": "evt_45052c14e1f1dbc7",
+      "event_type": "DetectionEvent",
+      "event_time": "2026-07-11T10:34:10.599915+00:00",
+      "event_source": "yolo_detector",
+      "yolo_confidence": 0.9,
+      "bbox_2d": [
+        81.0,
+        129.0,
+        301.0,
+        260.0
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.txt#2",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.jpg"
+    },
+    {
+      "event_id": "evt_df023af82b49d8f1",
+      "event_type": "DetectionEvent",
+      "event_time": "2026-07-11T10:34:10.599950+00:00",
+      "event_source": "yolo_detector",
+      "yolo_confidence": 0.9,
+      "bbox_2d": [
+        333.99999999999994,
+        121.00000000000001,
+        402.0,
+        239.99999999999997
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.txt#3",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.jpg"
+    },
+    {
+      "event_id": "evt_043d0ad22b5b1dd2",
+      "event_type": "DetectionEvent",
+      "event_time": "2026-07-11T10:34:10.599981+00:00",
+      "event_source": "yolo_detector",
+      "yolo_confidence": 0.9,
+      "bbox_2d": [
+        134.0,
+        152.0,
+        201.0,
+        214.0
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.txt#4",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.jpg"
+    },
+    {
+      "event_id": "evt_ba53157398d9fd48",
+      "event_type": "DetectionEvent",
+      "event_time": "2026-07-11T10:34:10.600012+00:00",
+      "event_source": "yolo_detector",
+      "yolo_confidence": 0.9,
+      "bbox_2d": [
+        226.0,
+        237.0,
+        344.0,
+        308.0
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.txt#5",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\image_2-after1_jpg.rf.ytuqfrBe5Um00sPjnTJd.jpg"
+    },
+    {
+      "event_id": "evt_9937ff8a7306fa13",
+      "event_type": "DetectionEvent",
+      "event_time": "2026-07-11T10:34:10.600589+00:00",
+      "event_source": "yolo_detector",
+      "yolo_confidence": 0.5,
+      "bbox_2d": [
+        225.0,
+        42.0,
+        894.0,
+        614.0
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\259650ef49ebae050d60dd52614b5c02_jpg.rf.uPUYawnIXxEblhooyu00.txt#1",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\259650ef49ebae050d60dd52614b5c02_jpg.rf.uPUYawnIXxEblhooyu00.jpg"
+    },
+    {
+      "event_id": "evt_c167006d35ba568e",
+      "event_type": "DetectionEvent",
+      "event_time": "2026-07-11T10:34:10.600619+00:00",
+      "event_source": "yolo_detector",
+      "yolo_confidence": 0.9,
+      "bbox_2d": [
+        178.0,
+        715.0,
+        477.0,
+        1017.0
+      ],
+      "mask_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\labels\\259650ef49ebae050d60dd52614b5c02_jpg.rf.uPUYawnIXxEblhooyu00.txt#2",
+      "crop_ref": "E:\\博论相关\\test_my\\My First Project.yolov11\\train\\images\\259650ef49ebae050d60dd52614b5c02_jpg.rf.uPUYawnIXxEblhooyu00.jpg"
+    },
+    {
+      "event_id": "evt_b8b6e129a2d24420",
+      "event_type": "HumanReviewEvent",
+      "event_time": "2026-07-11T10:34:10.600642+00:00",
+      "event_source": "human_reviewer",
+      "review_action": "confirm_existing",
+      "reason": "Author-controlled example: the 0.50 paperboard candidate is confirmed from the annotation."
     }
-  ]
+  ],
+  "schema": {
+    "node_fields": {
+      "WasteCategory": [
+        "category_name",
+        "risk_level",
+        "fragility",
+        "graspability_prior",
+        "vlm_review_policy",
+        "default_handling_policy",
+        "visual_prototype"
+      ],
+      "Scene": [
+        "scene_id",
+        "captured_at",
+        "rgb_ref",
+        "depth_ref"
+      ],
+      "ObjectInstance": [
+        "instance_id",
+        "yolo_confidence",
+        "recognition_status",
+        "bbox_2d",
+        "mask_ref",
+        "crop_ref",
+        "center_xyz_camera",
+        "depth_valid_ratio",
+        "observed_extent_3d",
+        "occlusion_state",
+        "vlm_consistency",
+        "current_handling_policy",
+        "task_status",
+        "attempt_count"
+      ],
+      "UnknownSample": [
+        "sample_id",
+        "crop_ref",
+        "mask_ref",
+        "yolo_topk",
+        "vlm_attributes",
+        "review_status",
+        "human_label"
+      ],
+      "UnknownCluster": [
+        "cluster_id",
+        "member_count",
+        "prototype_attributes",
+        "representative_crop_ref",
+        "review_status",
+        "candidate_category_name"
+      ],
+      "Event": [
+        "event_id",
+        "event_type",
+        "event_time",
+        "event_source"
+      ]
+    },
+    "category_attribute_enums": {
+      "risk_level": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "fragility": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "graspability_prior": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "vlm_review_policy": [
+        "threshold_based",
+        "always"
+      ],
+      "default_handling_policy": [
+        "auto_allowed",
+        "human_confirmation_required"
+      ]
+    },
+    "visual_attribute_enums": {
+      "dominant_color": [
+        "clear",
+        "white",
+        "light_gray",
+        "gray",
+        "dark_gray",
+        "black",
+        "brown",
+        "yellow_brown",
+        "red_brown",
+        "yellow",
+        "silver",
+        "rust_brown",
+        "light_green",
+        "light_blue",
+        "mixed",
+        "unknown"
+      ],
+      "transparency": [
+        "transparent",
+        "translucent",
+        "opaque",
+        "unknown"
+      ],
+      "glossiness": [
+        "low",
+        "medium",
+        "high",
+        "metallic",
+        "unknown"
+      ],
+      "surface_texture": [
+        "rough",
+        "smooth",
+        "powdery",
+        "granular",
+        "fibrous",
+        "porous",
+        "wrinkled",
+        "layered",
+        "wood_grain",
+        "unknown"
+      ],
+      "edge_fracture": [
+        "sharp",
+        "blunt",
+        "flat_broken",
+        "irregular_broken",
+        "torn",
+        "folded",
+        "layered_break",
+        "unknown"
+      ],
+      "shape_form": [
+        "block_like",
+        "thin_plate",
+        "sheet_like",
+        "film_like",
+        "rod_like",
+        "irregular_chunk",
+        "fragment",
+        "unknown"
+      ]
+    },
+    "instance_attribute_enums": {
+      "recognition_status": [
+        "accepted",
+        "review_required",
+        "unknown"
+      ],
+      "occlusion_state": [
+        "none",
+        "partial",
+        "unknown"
+      ],
+      "vlm_consistency": [
+        "support",
+        "conflict",
+        "not_checked"
+      ],
+      "current_handling_policy": [
+        "auto_allowed",
+        "human_confirmation_required",
+        "human_review_required",
+        "robot_forbidden"
+      ],
+      "task_status": [
+        "pending",
+        "processing",
+        "completed",
+        "failed"
+      ]
+    },
+    "unknown_sample_review_statuses": [
+      "pending",
+      "confirmed_existing",
+      "confirmed_new",
+      "rejected"
+    ],
+    "event_definitions": {
+      "DetectionEvent": {
+        "source": "yolo_detector",
+        "attributes": [
+          "yolo_confidence",
+          "bbox_2d",
+          "mask_ref",
+          "crop_ref"
+        ],
+        "attribute_enums": {},
+        "trigger": "YOLO 或已审核标注产生置信度不低于 proposal_threshold 的候选。",
+        "preconditions": [
+          "Scene 已创建",
+          "候选类别属于 11 类词表"
+        ],
+        "relations": [
+          "IN_SCENE->Scene",
+          "DETECTED->ObjectInstance",
+          "PROPOSED->WasteCategory"
+        ],
+        "effects": [
+          "创建或更新 ObjectInstance",
+          "创建 CANDIDATE_OF",
+          "设置 vlm_consistency=not_checked",
+          "设置 task_status=pending",
+          "新实例设置 attempt_count=0"
+        ]
+      },
+      "VLMReviewEvent": {
+        "source": "vlm_service",
+        "attributes": [
+          "image_quality",
+          "visual_attributes",
+          "consistency",
+          "reason"
+        ],
+        "attribute_enums": {
+          "image_quality": [
+            "clear",
+            "limited",
+            "poor"
+          ],
+          "consistency": [
+            "support",
+            "conflict"
+          ]
+        },
+        "trigger": "置信度或类别策略要求 VLM 复核，并且 crop 可用。",
+        "preconditions": [
+          "ObjectInstance 已存在",
+          "CANDIDATE_OF 已存在"
+        ],
+        "relations": [
+          "REVIEWS->ObjectInstance",
+          "CHECKS_AGAINST->WasteCategory"
+        ],
+        "effects": [
+          "support：设置 vlm_consistency=support、recognition_status=accepted，并创建 CONFIRMED_AS",
+          "conflict：设置 vlm_consistency=conflict、recognition_status=unknown、robot_forbidden，并创建 UnknownSample"
+        ]
+      },
+      "DepthUpdateEvent": {
+        "source": "depth_processor",
+        "attributes": [
+          "center_xyz_camera",
+          "depth_valid_ratio",
+          "observed_extent_3d",
+          "occlusion_state"
+        ],
+        "attribute_enums": {
+          "occlusion_state": [
+            "none",
+            "partial",
+            "unknown"
+          ]
+        },
+        "trigger": "RealSense 深度观测为实例提供有效三维证据。",
+        "preconditions": [
+          "Scene 已存在",
+          "ObjectInstance 已存在",
+          "深度证据可用"
+        ],
+        "relations": [
+          "IN_SCENE->Scene",
+          "UPDATES->ObjectInstance"
+        ],
+        "effects": [
+          "更新四个几何字段",
+          "重新计算当前 Scene 的 NEAR"
+        ]
+      },
+      "HumanReviewEvent": {
+        "source": "human_reviewer",
+        "attributes": [
+          "review_action",
+          "reason"
+        ],
+        "attribute_enums": {
+          "review_action": [
+            "confirm_existing",
+            "mark_unknown",
+            "approve_robot",
+            "forbid_robot",
+            "discard_detection"
+          ]
+        },
+        "trigger": "Supervisor 到达 human_review_interrupt，并收到明确的人工决定。",
+        "preconditions": [
+          "复核目标存在",
+          "人工决定明确"
+        ],
+        "relations": [
+          "REVIEWS->ObjectInstance/UnknownSample/UnknownCluster",
+          "CONFIRMS->WasteCategory when applicable"
+        ],
+        "effects": [
+          "confirm_existing：设置 accepted 并创建 CONFIRMED_AS",
+          "mark_unknown：设置 unknown、robot_forbidden，并创建 UnknownSample",
+          "approve_robot/forbid_robot：不改变类别，只更新 current_handling_policy",
+          "discard_detection：从当前场景状态移除误检，同时保留事件审计证据"
+        ]
+      },
+      "PlanningEvent": {
+        "source": "task_planner",
+        "attributes": [
+          "planned_action",
+          "reason"
+        ],
+        "attribute_enums": {
+          "planned_action": [
+            "robot_grasp",
+            "request_human_review",
+            "rescan",
+            "no_action"
+          ]
+        },
+        "trigger": "Supervisor 基于最新 graph_state 请求唯一一个下一步动作。",
+        "preconditions": [
+          "当前 Scene 为最新场景",
+          "硬资格检查已完成"
+        ],
+        "relations": [
+          "IN_SCENE->Scene",
+          "SELECTS->ObjectInstance when one target is selected"
+        ],
+        "effects": [
+          "只记录一个下一步动作",
+          "被选 ObjectInstance.task_status=processing"
+        ]
+      },
+      "ExecutionEvent": {
+        "source": "robot_controller",
+        "attributes": [
+          "action_id",
+          "physical_attempt_started",
+          "execution_result",
+          "failure_reason"
+        ],
+        "attribute_enums": {
+          "execution_result": [
+            "success",
+            "failure"
+          ]
+        },
+        "trigger": "唯一结构化动作通过门控，且机器人真实物理尝试已经开始。",
+        "preconditions": [
+          "action_id 未执行",
+          "MoveIt 规划通过",
+          "physical_attempt_started=true"
+        ],
+        "relations": [
+          "IN_SCENE->Scene",
+          "EXECUTES_ON->ObjectInstance"
+        ],
+        "effects": [
+          "attempt_count += 1",
+          "success：task_status=completed",
+          "failure：task_status=failed",
+          "重新规划前强制采集 RGB-D 并创建新 Scene"
+        ]
+      },
+      "KnowledgeEvolutionEvent": {
+        "source": "knowledge_updater",
+        "attributes": [
+          "evolution_action",
+          "reason"
+        ],
+        "attribute_enums": {
+          "evolution_action": [
+            "assign_existing_category",
+            "create_unknown_cluster",
+            "propose_new_category",
+            "promote_new_category",
+            "discard_unknown"
+          ]
+        },
+        "trigger": "unknown 证据通过所需的人工、样本、训练和验证门控。",
+        "preconditions": [
+          "人工确认",
+          "样本充分",
+          "数据审核",
+          "晋升类别前完成训练和独立验证"
+        ],
+        "relations": [
+          "UPDATES->UnknownSample/UnknownCluster",
+          "CREATES->WasteCategory only after promotion"
+        ],
+        "effects": [
+          "更新 unknown 记忆",
+          "只有 promote_new_category 可以创建长期类别"
+        ]
+      }
+    }
+  },
+  "provenance": {
+    "evidence_level": "illustrative_scenario_not_robot_validation",
+    "model_inference_used": false,
+    "training_used": false
+  }
 }
