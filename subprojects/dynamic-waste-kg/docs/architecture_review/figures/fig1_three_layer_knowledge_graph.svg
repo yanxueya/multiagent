@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1350" viewBox="0 0 2400 1350">
+<defs>
+<marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="context-stroke"/></marker>
+<filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-opacity="0.12"/></filter>
+</defs>
+<rect width="2400" height="1350" fill="#F7F9FC"/>
+<text x="90" y="72" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="42" font-weight="700" fill="#172033">① 三层动态知识图谱架构</text>
+<text x="90" y="112" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="23" fill="#5B6577">层级是语义分层，不在 Neo4j 中创建虚构 Layer 节点；类别由关系表达，不作为实例属性持久化</text>
+<rect x="70" y="145" width="2260" height="270" rx="24" fill="#DDF3E4" stroke="#26734D" stroke-width="3"/>
+<text x="98" y="187" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" fill="#26734D">长期知识层  Long-term knowledge</text>
+<rect x="70" y="445" width="2260" height="430" rx="24" fill="#DCEEFF" stroke="#173F6D" stroke-width="3"/>
+<text x="98" y="487" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" fill="#173F6D">短期记忆层  Short-term memory</text>
+<rect x="70" y="905" width="2260" height="350" rx="24" fill="#FCE3E8" stroke="#A33A50" stroke-width="3"/>
+<text x="98" y="947" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" fill="#A33A50">事件日志层  Append-only event log</text>
+<line x1="510" y1="617" x2="660" y2="627" stroke="#173F6D" stroke-width="4" marker-end="url(#arrow)"/>
+<rect x="503" y="588" width="164" height="32" rx="8" fill="#F7F9FC" opacity="0.94"/>
+<text x="585" y="612" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="20" fill="#173F6D">CONTAINS</text>
+<line x1="1280" y1="627" x2="1430" y2="595" stroke="#B86616" stroke-width="4" marker-end="url(#arrow)"/>
+<rect x="1273" y="577" width="164" height="32" rx="8" fill="#F7F9FC" opacity="0.94"/>
+<text x="1355" y="601" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="20" fill="#B86616">RECORDED_AS</text>
+<line x1="1840" y1="595" x2="1910" y2="617" stroke="#B86616" stroke-width="4" marker-end="url(#arrow)"/>
+<rect x="1793" y="572" width="164" height="32" rx="8" fill="#F7F9FC" opacity="0.94"/>
+<text x="1875" y="596" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="20" fill="#B86616">MEMBER_OF</text>
+<line x1="970" y1="500" x2="470" y2="375" stroke="#26734D" stroke-width="4" marker-end="url(#arrow)"/>
+<rect x="638" y="403" width="164" height="32" rx="8" fill="#F7F9FC" opacity="0.94"/>
+<text x="720" y="427" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="20" fill="#26734D">CANDIDATE_OF / CONFIRMED_AS</text>
+<rect x="130" y="210" width="680" height="165" rx="18" fill="#DDF3E4" stroke="#26734D" stroke-width="3" filter="url(#shadow)"/>
+<text x="470" y="252" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="31" font-weight="700" fill="#26734D">WasteCategory（11类）</text>
+<text x="152" y="288" font-family="Microsoft YaHei, sans-serif" font-size="21" fill="#172033">主键 category_name</text>
+<text x="152" y="319" font-family="Microsoft YaHei, sans-serif" font-size="21" fill="#172033">risk / fragility / graspability_prior</text>
+<text x="152" y="350" font-family="Microsoft YaHei, sans-serif" font-size="21" fill="#172033">VLM policy / handling policy / visual prototype</text>
+<rect x="940" y="210" width="610" height="165" rx="18" fill="#FFFFFF" stroke="#26734D" stroke-width="3" filter="url(#shadow)"/>
+<text x="1245" y="252" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="31" font-weight="700" fill="#26734D">知识种子证据边界</text>
+<text x="962" y="288" font-family="Microsoft YaHei, sans-serif" font-size="21" fill="#172033">人工定义、待实验验证</text>
+<text x="962" y="319" font-family="Microsoft YaHei, sans-serif" font-size="21" fill="#172033">单次观测不得直接修改长期先验</text>
+<text x="962" y="350" font-family="Microsoft YaHei, sans-serif" font-size="21" fill="#172033">演化需审核、训练与独立验证</text>
+<rect x="1680" y="210" width="580" height="165" rx="18" fill="#FFFFFF" stroke="#C73E4D" stroke-width="3" filter="url(#shadow)"/>
+<text x="1970" y="252" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="31" font-weight="700" fill="#C73E4D">禁止进入 KG 的规划属性</text>
+<text x="1702" y="288" font-family="Microsoft YaHei, sans-serif" font-size="21" fill="#172033">task_value / priority_tier</text>
+<text x="1702" y="319" font-family="Microsoft YaHei, sans-serif" font-size="21" fill="#172033">动态评分、动作顺序、失败策略</text>
+<rect x="120" y="535" width="390" height="165" rx="18" fill="#FFFFFF" stroke="#173F6D" stroke-width="3" filter="url(#shadow)"/>
+<text x="315" y="577" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="31" font-weight="700" fill="#173F6D">Scene</text>
+<text x="142" y="613" font-family="Microsoft YaHei, sans-serif" font-size="23" fill="#172033">scene_id / captured_at</text>
+<text x="142" y="646" font-family="Microsoft YaHei, sans-serif" font-size="23" fill="#172033">rgb_ref / depth_ref</text>
+<rect x="660" y="500" width="620" height="255" rx="18" fill="#FFFFFF" stroke="#173F6D" stroke-width="3" filter="url(#shadow)"/>
+<text x="970" y="542" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="31" font-weight="700" fill="#173F6D">ObjectInstance</text>
+<text x="682" y="578" font-family="Microsoft YaHei, sans-serif" font-size="20" fill="#172033">识别：confidence / status / VLM consistency</text>
+<text x="682" y="608" font-family="Microsoft YaHei, sans-serif" font-size="20" fill="#172033">证据：bbox / mask / crop</text>
+<text x="682" y="638" font-family="Microsoft YaHei, sans-serif" font-size="20" fill="#172033">几何：center / depth ratio / extent / occlusion</text>
+<text x="682" y="668" font-family="Microsoft YaHei, sans-serif" font-size="20" fill="#172033">任务：handling policy / status / attempts</text>
+<rect x="1430" y="500" width="410" height="190" rx="18" fill="#FFF0D6" stroke="#B86616" stroke-width="3" filter="url(#shadow)"/>
+<text x="1635" y="542" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="31" font-weight="700" fill="#B86616">UnknownSample</text>
+<text x="1452" y="578" font-family="Microsoft YaHei, sans-serif" font-size="20" fill="#172033">crop / mask / YOLO top-k</text>
+<text x="1452" y="608" font-family="Microsoft YaHei, sans-serif" font-size="20" fill="#172033">VLM attributes / review status</text>
+<text x="1452" y="638" font-family="Microsoft YaHei, sans-serif" font-size="20" fill="#172033">human label</text>
+<rect x="1910" y="535" width="360" height="165" rx="18" fill="#FFF0D6" stroke="#B86616" stroke-width="3" filter="url(#shadow)"/>
+<text x="2090" y="577" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="31" font-weight="700" fill="#B86616">UnknownCluster</text>
+<text x="1932" y="613" font-family="Microsoft YaHei, sans-serif" font-size="20" fill="#172033">members / prototype</text>
+<text x="1932" y="643" font-family="Microsoft YaHei, sans-serif" font-size="20" fill="#172033">representative crop</text>
+<text x="1932" y="673" font-family="Microsoft YaHei, sans-serif" font-size="20" fill="#172033">candidate category</text>
+<rect x="105" y="995" width="270" height="115" rx="18" fill="#FFFFFF" stroke="#A33A50" stroke-width="3" filter="url(#shadow)"/>
+<text x="240" y="1037" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="18" font-weight="700" fill="#A33A50">DetectionEvent</text>
+<text x="127" y="1073" font-family="Microsoft YaHei, sans-serif" font-size="17" fill="#172033">event_id / time / source</text>
+<rect x="425" y="995" width="270" height="115" rx="18" fill="#FFFFFF" stroke="#A33A50" stroke-width="3" filter="url(#shadow)"/>
+<text x="560" y="1037" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="18" font-weight="700" fill="#A33A50">VLMReviewEvent</text>
+<text x="447" y="1073" font-family="Microsoft YaHei, sans-serif" font-size="17" fill="#172033">event_id / time / source</text>
+<rect x="745" y="995" width="270" height="115" rx="18" fill="#FFFFFF" stroke="#A33A50" stroke-width="3" filter="url(#shadow)"/>
+<text x="880" y="1037" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="18" font-weight="700" fill="#A33A50">DepthUpdateEvent</text>
+<text x="767" y="1073" font-family="Microsoft YaHei, sans-serif" font-size="17" fill="#172033">event_id / time / source</text>
+<rect x="1065" y="995" width="270" height="115" rx="18" fill="#FFFFFF" stroke="#A33A50" stroke-width="3" filter="url(#shadow)"/>
+<text x="1200" y="1037" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="18" font-weight="700" fill="#A33A50">HumanReviewEvent</text>
+<text x="1087" y="1073" font-family="Microsoft YaHei, sans-serif" font-size="17" fill="#172033">event_id / time / source</text>
+<rect x="1385" y="995" width="270" height="115" rx="18" fill="#FFFFFF" stroke="#A33A50" stroke-width="3" filter="url(#shadow)"/>
+<text x="1520" y="1037" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="18" font-weight="700" fill="#A33A50">PlanningEvent</text>
+<text x="1407" y="1073" font-family="Microsoft YaHei, sans-serif" font-size="17" fill="#172033">event_id / time / source</text>
+<rect x="1705" y="995" width="270" height="115" rx="18" fill="#FFFFFF" stroke="#A33A50" stroke-width="3" filter="url(#shadow)"/>
+<text x="1840" y="1037" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="18" font-weight="700" fill="#A33A50">ExecutionEvent</text>
+<text x="1727" y="1073" font-family="Microsoft YaHei, sans-serif" font-size="17" fill="#172033">event_id / time / source</text>
+<rect x="2025" y="995" width="270" height="115" rx="18" fill="#FFFFFF" stroke="#A33A50" stroke-width="3" filter="url(#shadow)"/>
+<text x="2160" y="1037" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="18" font-weight="700" fill="#A33A50">KnowledgeEvolutionEvent</text>
+<text x="2047" y="1073" font-family="Microsoft YaHei, sans-serif" font-size="17" fill="#172033">event_id / time / source</text>
+<text x="970" y="825" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="22" fill="#173F6D">ObjectInstance &lt;-&gt; ObjectInstance：NEAR（无属性关系）</text>
+<text x="1200" y="1180" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="22" fill="#A33A50">事件通过 IN_SCENE / DETECTED / REVIEWS / UPDATES / SELECTS / EXECUTES_ON / CREATES 等关系连接真实业务节点</text>
+</svg>

@@ -11,6 +11,7 @@
 优先阅读：
 
 - [知识图谱权威设计](knowledge_seed_zh.md)
+- [全项目架构审计与四张逻辑图](architecture_review/README.md)
 - [三层知识图谱运行与联动指南](knowledge_graph_runtime_zh.md)
 - [单张实验室图片接入 KG 与 Neo4j 示例](single_image_kg_example_zh.md)
 - [三张人工标注图片的 KG 构建与事件流示例](annotated_image_kg_walkthrough_zh.md)
@@ -47,6 +48,7 @@
 
 用于理解训练数据、合并过程和模型结果：
 
+- [补拍后模型训练、LLM 复核与动作前后知识图谱更新操作手册](post_capture_training_llm_kg_guide_zh.md)
 - [数据集处理与感知流水线](dataset_and_perception_pipeline_zh.md)
 - [眼在手上场景的最小数据采集与标注方案](../datasets/docs/minimal_eye_in_hand_collection_zh.md)
 - [当前 YOLO 模型训练结果图文说明](current_yolo_training_results_zh.md)
